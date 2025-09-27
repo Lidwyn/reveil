@@ -1,0 +1,268 @@
+\documentclass{article}
+\usepackage[T1]{fontenc} % Gestion des caractères (é et à)
+\usepackage[utf8]{inputenc} % Encodage UTF-8
+\usepackage{geometry} % Gestion des marges
+\usepackage{fullpage} % Utiliser toute la page
+\usepackage{enumitem} % listes personnalisées
+\usepackage{amsmath} % Formules mathématiques
+\usepackage{graphicx} % Insertion d'image
+\usepackage[export]{adjustbox} % Ajuster la hauteur des images dans les minipages
+\usepackage{caption} % Légendes
+\usepackage{subcaption} % Sous légendes (pour plusieurs images en une)
+\graphicspath{ {./fig/} } % Dossier d'images
+\usepackage[many]{tcolorbox} % Boîtes colorées
+\usepackage{indentfirst} % Identation du premier paragraphe
+\usepackage{xparse} % Pour \NewDocumentCommand
+\usepackage{fp}
+\usepackage{tikz} % Graphique et annotations d'images
+\usepackage{layout} % Affichage des marges
+\usepackage{nameref} % Avoir le nom d'une section par un label
+\usepackage{tocloft} % Pour gérer la map de la table des champ
+\usepackage{bbding} % Avoir le caractère \Checkmark
+
+\definecolor{boxlightgrey}{rgb}{0.8,0.8,0.8}
+\definecolor{boxdarkgrey}{rgb}{0.25,0.25,0.25}
+
+\geometry{ % zone de texte plus grande
+    a4paper,
+    hmargin = 3cm,
+    top = 2cm
+}
+
+    % Packages mise en page : texte
+\setlength\parindent{20pt}
+
+    % Numero de section en lettre romaine
+\renewcommand{\thesection}{\Roman{section}}
+\renewcommand{\thesubsection}{\hspace{2pt} \Large \arabic{subsection}}
+\renewcommand{\thesubsubsection}{\hspace{7pt} \large \arabic{subsection}.\arabic{subsubsection}}
+
+    % Lettre encerclée
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+    \node[shape=circle,draw,inner sep=1pt] (char) {#1};}}
+    % Annotation d'image
+
+%\annotatedFigureBox{bottom left point}{top righ corner}{label}{label coordinate}[main color][backgroud color]
+\NewDocumentCommand{\annotatedFigureBoxCustom}{m m m m O{black} O{white}}{
+    \draw[#5,thick,rounded corners] (#1) rectangle (#2);
+    \if\relax\detokenize{#3}\relax
+        % empty
+    \else
+        \annotatedFigureLetter{#3}{#4}[#5][#6]
+    \fi
+}
+
+%\annotatedFigureBox{xA}{yA}{width}{height}{label}{label pos}[main color][backgroud color]
+\NewDocumentCommand{\annotatedFigureBox}{m m m m m m O{black} O{white}}{
+    \FPeval{\xB}{#1 + #3}   % xB yB : top right corner
+    \FPeval{\yB}{#2 + #4}
+    \FPeval{\xC}{#1 + #3/2} % xC yC : midle point
+    \FPeval{\yC}{#2 + #4/2}
+    \ifnum#6=1 % getting label coordinate with the coordinate pos #6
+        \def\a{#1}
+        \def\b{#2}
+    \else\ifnum#6=2
+        \def\a{\xB}
+        \def\b{#2}
+    \else\ifnum#6=3
+        \def\a{\xB}
+        \def\b{\yB}
+    \else\ifnum#6=4
+        \def\a{#1}
+        \def\b{\yB}
+    \else\ifnum#6=5
+        \def\a{\xC}
+        \def\b{#2}
+    \else\ifnum#6=6
+        \def\a{\xB}
+        \def\b{\yC}
+    \else\ifnum#6=7
+        \def\a{\xC}
+        \def\b{\yB}
+    \else\ifnum#6=8
+        \def\a{#1}
+        \def\b{\yC}
+    \fi\fi\fi\fi\fi\fi\fi\fi
+    \annotatedFigureBoxCustom{#1,#2}{\xB,\yB}{#5}{\a,\b}[#7][#8]
+}
+
+%\annotatedFigureLetterCustom{label}{x, y}[main color][backgroud color]
+\NewDocumentCommand{\annotatedFigureLetter}{m m O{black} O{white}}{
+    \node at (#2) [fill=#4,thick,shape=circle,draw=#3,inner sep=1pt,font=\sffamily,text=#3] {\small\textbf{#1}};
+}
+
+\newenvironment {annotatedFigure}[1]{\centering\begin{tikzpicture}[baseline=(top)]
+    \node[anchor=south west,inner sep=0] (image) at (0,0) { #1};
+    \begin{scope}[x={(image.south east)},y={(image.north west)}]}% BODY here
+{\end{scope}
+\path (current bounding box.north) ++(0pt,-\ht\strutbox) coordinate (top);
+\end{tikzpicture}}
+
+\title{MANUEL D'UTILISATION DU REVEIL}
+\author{LIDWYN LE BARS}
+\date{05 Juillet 2025}
+
+\begin{document}
+    % Ne pas afficher les \subsubsection{}
+\addtocontents{toc}{\protect\setcounter{tocdepth}{2}}
+
+\maketitle
+
+\section{Introduction}
+
+Ce réveil à pour fonctionnalité l'affichage de l'heure, et une alarme sonore qui se déclenche automatiquement à une heure réglé en amont par l'utilisateur.
+En plus de ça, le réveil à la capacité d'enregistrées plusieurs réveils qui ont une heure de déclenchement et les jours de la semaine où ils se déclenchents.
+On peut aussi inhibé l'affichage pour être dans le noir complet.
+
+\section{Fonctionnalités et spécificités du réveil}
+
+Le réveil permet l'affichage et le réglage d'heure. Il permet de configurer plusieurs réveils en simultané, et les enregistres même quand il ne sont pas actifs.
+Par exemple, un réveil à 8h les lundis, mardis et mercredis, et un autre à 8h15 les jeudis et vendredis. Les révéils peuvents aussi être à usage unique et s'auto désarmer ensuite.
+
+
+\section{Élement du réveil}
+
+Voici la liste des éléments sur le réveil:
+
+\begin{figure}[h!]
+    \centering
+    \begin{annotatedFigure}
+        {\includegraphics[width = .9\textwidth]{reveil.png}}
+        \annotatedFigureBox{.026}{.08}{.608}{.833}{A}{5}[red]
+        \annotatedFigureBox{.661}{.115}{.311}{.4}{B}{8}[red]
+        \annotatedFigureBox{.678}{.53}{.19}{.4}{C}{4}[red]
+        \annotatedFigureBox{.89}{.6}{.082}{.25}{D}{1}[red]
+        \annotatedFigureBox{.651}{.065}{.321}{.05}{E}{8}[red]
+    \end{annotatedFigure}
+    \caption{Haching Tool}
+    \label{fig:hachingTool1}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{A} : Affichage 1 : heure : minute
+    \item \textbf{B} : Affichage 2 : heure : minute de la prochaine alarme (éteind si null)
+    \item \textbf{C} : 4 boutons de selections directionnels
+    \item \textbf{D} : Bouton Setup
+    \item \textbf{E} : 7 Leds pour l'affichage des jours de la semaine pour le réglage des alarmes
+    \item non affiché : un large bouton sur le dessus permettant l'arrêt de l'alarme ou le control de l'inibition de l'affichage
+\end{itemize}
+
+\section{Réglage de l'heure}
+
+Pour le réglage de l'heure, il faut tout d'abord appuyer sur le bouton setup (bouton S).
+Lorsqu'on appui sur le bouton setup, l'affichage de l'heure se met à clignoter et les secondes sont affichées sur l'écran de droite.
+Lorsqu'un élément cligonte (l'heure par défaut), on peut le modifier avec les flèches directionnelle haute et basse.
+Pour passer d'un éléments à un autre, on utilise les flèches de gauche et de droite. Nous avons dans l'ordre:
+
+Heures $\leftrightarrow$ Minutes $\leftrightarrow$ Secondes $\leftrightarrow$ Jours $\leftrightarrow$ Mois $\leftrightarrow$ Année
+
+Attention, ce réglage ne prend pas en comptes les années bissextile. Lors du passage de secondes à Jours,
+L'inteface change vers la deuxième "page" où l'on retrouve le jours sur les deux premiers digits de l'affichage principal,
+le mois sur les deux derniers digits de l'affichage principal et l'année sur l'affichage secondaire.
+
+Pour le réglage des secondes, on appui sur le bouton "haut", à ce moment le clignotement s'arrête
+et une seconde est sélectionnée : le prochain 0, 15, 30 ou 45 et on peut ajouter 15 sec en appuyant à nouveaux sur ce bouton.
+On peut aussi en retier avec le bouton "bas", le bouton "gauche permet d'annuler la modification" et le bouton gauche permet de force la seconde de l'appareil à celle affichée.
+Cela permet de synchroniser l'appareil avec un horloge externe. En pratique on met la seconde sur une seconde qui n'est pas encore arrivé,
+on attend avec une autre horloge et au moment ou l'on arrive sur cette seconde avec la deuxième horloge, on clique sur le bouton gauche et les deux seront synchronisées.
+
+\begin{enumerate}
+    \item appuyer sur le bouton menu, l'affichage de l'heure clignote, et l'affichage du prochain reveil passe à l'affichage des secondes.
+    \item reglage de l'heure (et des autres paramètres à part les secondes) avec les boutons haut et bas
+    \item selections du paramètre via les touches gauche et droite dans l'ordre : Heures $\leftrightarrow$ Minutes $\leftrightarrow$ Secondes $\leftrightarrow$ Jours $\leftrightarrow$ Mois $\leftrightarrow$ Année
+    \item lorsque l'on clique sur le bouton droite alors que ce sont les secondes qui sont séléctionnés, on passe sur l'affichage des réglage bis, comme ceci:
+\end{enumerate}
+
+\subsection{appuyer sur le bouton menu}
+
+Pour commencer on appui sur le bouton menu/setup \circled{\textbf{A}}. 
+On passe en mode réglage, et l'affichage de l'heure clignote \circled{\textbf{B}}, et l'affichage du prochain reveil passe à l'affichage des secondes\circled{\textbf{C}}.
+
+\begin{figure}[h!]
+    \centering
+    \begin{annotatedFigure}
+        {\includegraphics[width = .9\textwidth]{reveil.png}}
+        \annotatedFigureBox{.026}{.08}{.288}{.833}{B}{2}[red]
+        \annotatedFigureBox{.661}{.115}{.311}{.4}{C}{8}[red]
+        \annotatedFigureBox{.89}{.6}{.082}{.25}{A}{1}[red]
+    \end{annotatedFigure}
+    \caption{passage en mode modification}
+    \label{bouton menu}
+\end{figure}
+
+\clearpage  %______________________________/!\_clearpage_/!\_____________________________
+
+\subsection{reglage des paramètres}
+
+Dans ce mode on peut régler les paramètres lorsqu'ils sont sélectionnés. Pour se faire, il faut utiliser les bouton haut et bas \circled{\textbf{D}}.
+Sauf pour les secondes ou le réglage est différent et sera expliqué plus tard.
+
+\begin{figure}[h!]
+    \centering
+    \begin{annotatedFigure}
+        {\includegraphics[width = .9\textwidth]{reveil.png}}
+        \annotatedFigureBox{.738}{.53}{.07}{.4}{D}{4}[red]
+    \end{annotatedFigure}
+    \caption{bouton haut et bas}
+    \label{bouton haut et bas}
+\end{figure}
+
+\subsection{Séléction des paramètres}
+
+Il y a 6 paramètres réglables dans l'ordre :
+\begin{itemize}
+    \item Heure \circled{\textbf{G}}
+    \item Minute \circled{\textbf{H}}
+    \item Seconde \circled{\textbf{I}}
+    \item Jour \circled{\textbf{J}}
+    \item Mois \circled{\textbf{K}}
+    \item Année \circled{\textbf{L}}
+\end{itemize}
+
+Pour passer d'un paramètre à l'autre, il faut utiliser les boutons droite \circled{\textbf{E}} et gauche \circled{\textbf{F}}.
+
+\begin{figure}[h!]
+    \centering
+    \begin{annotatedFigure}
+        {\includegraphics[width = .9\textwidth]{reveil.png}}
+        \annotatedFigureBox{.675}{.6}{.082}{.25}{E}{1}[red]
+        \annotatedFigureBox{.79}{.6}{.082}{.25}{F}{2}[red]
+        \annotatedFigureBox{.026}{.08}{.288}{.833}{G}{3}[red]
+        \annotatedFigureBox{.344}{.08}{.288}{.833}{H}{1}[red]
+        \annotatedFigureBox{.661}{.115}{.15}{.4}{I}{8}[red]
+    \end{annotatedFigure}
+    \caption{bouton droite et gauche, heure, minute et seconde}
+    \label{affichage 1 reglage}
+\end{figure}
+
+\clearpage  %______________________________/!\_clearpage_/!\_____________________________
+
+lorsqu'on est sur les secondes et qu'on appui sur le bouton droite, on passe sur l'affichage 2 avec les paramètres restant.
+Pour revenir au premier écran, il faut appuyer sur le bouton gauche lorqu'on est sur les jours.
+
+\begin{figure}[h!]
+    \centering
+    \begin{annotatedFigure}
+        {\includegraphics[width = .9\textwidth]{reveil.png}}
+        \annotatedFigureBox{.026}{.08}{.288}{.833}{J}{3}[red]
+        \annotatedFigureBox{.344}{.08}{.288}{.833}{K}{1}[red]
+        \annotatedFigureBox{.661}{.115}{.311}{.4}{L}{8}[red]
+    \end{annotatedFigure}
+    \caption{Affichage 2}
+    \label{affichage 2 reglage}
+\end{figure}
+
+\subsection{Réglage des secondes}
+
+
+
+\clearpage  %______________________________/!\_clearpage_/!\_____________________________
+
+\section{Selections d'une alarme}
+
+\subsection{fonctionnement des alarmes enregistrées}
+
+\subsection{Création d'une nouvelle alarme}
+
+\subsection{Modification d'une alarme existante}
+\end{document}
