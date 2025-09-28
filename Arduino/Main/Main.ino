@@ -57,9 +57,10 @@ uint8_t selectedAlarm = 1; // alarme selectionnée
 bool selectedType = 0; // type d'alarme selectionnée (unique/non unique)
 bool menuReveilInit = false;
 bool confirmDelete = false;
-bool settingAlarm = true;
+bool settingAlarm = false;
 bool settingAlarmInit = false;
 bool alarmIsNew = false;
+bool UDHysteresis = false; // Variable permettant la mise en place d'un cycle d'hystérésis sur l'utilisation des boutons haut et bas
 // réutilisation de newTimeData, isSetting et selected
 // réutilisation de lastBlink, setupIsBlinking et blinkTime
 
@@ -392,7 +393,6 @@ void loop() { //-------------------------------------------------loop
   else if(mode == 1){ //-----------------------------------------mode setup
     DS3231::setupFullDateRead(newTimeData);
     if(!setupIsInit){
-      Serial.println("Setup init");
       selected = 0;
       isSetting = setupSelectNew(selected, newTimeData);
       setupIsInit = true;
@@ -472,7 +472,6 @@ void loop() { //-------------------------------------------------loop
       }
     }
     else if(setupEnd){
-      Serial.println("test Setup end");
       saveSetup(selected, isSetting); // on sauvegarde la valeur qui est sélectionnée
       setupIsInit = false; // reset de l'initialisation du mode setup
       mode = 0; // on passe en mode normal
@@ -672,27 +671,29 @@ void loop() { //-------------------------------------------------loop
     delay(10);
   }
   else if(mode == 2){ //-----------------------------------------menu reveil
-    if(!settingAlarm){ // test mode creation/modification d'alarme
+    if(!settingAlarm){ // Test mode selection ou creation/modification
+      // Mode selection
       if(!menuReveilInit){
         menuReveilInit = true;
         nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
-        selectedAlarm = 1; // première alarme
-        selectedType = false; // alarme de type non unique
+        selectedAlarm = 1; // Première alarme
+        selectedType = false; // Alarme de type non unique
         confirmDelete = false;
-        // Cycle hysteresis du bouton setupEnd (/!\ stop le programme, mais ça n'est pas particulièrement important);
-        bool setupSwitchStillUp = digitalRead(btSetup);
+        PCICR = 0; // Désactiver les interruptions pendant le setup
+        // Cycle hystérésis du bouton droite (/!\ stop le programme, mais ça n'est pas particulièrement important);
+        bool setupSwitchStillUp = digitalRead(btDroite);
         while(setupSwitchStillUp){
           delay(10);
-          setupSwitchStillUp = digitalRead(btSetup);
+          setupSwitchStillUp = digitalRead(btDroite);
         }
       }
       
       // partie bouton
-      const bool setupUp = digitalread(btHaut); // Plus grande prio
-      const bool setupDown = digitalread(btBas);
-      const bool setupRight = digitalread(btDroite);
-      const bool setupLeft = digitalread(btGauche);
-      const bool setupEnd = digitalread(boutonEnd); // Plus petite prio
+      const bool setupUp = digitalRead(btPlus); // Plus grande prio
+      const bool setupDown = digitalRead(btMoins);
+      const bool setupRight = digitalRead(btDroite);
+      const bool setupLeft = digitalRead(btGauche);
+      const bool setupEnd = digitalRead(btSetup); // Plus petite prio
       if(setupLeft || btGaucheLastState){
         if(!btGaucheLastState){
           btGaucheLastState = true;
@@ -709,30 +710,35 @@ void loop() { //-------------------------------------------------loop
           if(selectedType){
             AlarmNU[(selectedAlarm - 1) * 3] ^= 0b1000000;
             uint8_t buffer[3];
-            for(uint8_t i = 0; i < 3, i++){
+            for(uint8_t i = 0; i < 3; i++){
               buffer[i] = AlarmNU[(selectedAlarm - 1) * 3 + i];
             }
-            modifyNU(selectedAlarm - 1, uint8_t* buffer)
+            AT24C32::modifyNU(selectedAlarm - 1, buffer);
           }
           else{
             AlarmU[(selectedAlarm - 1) * 2] ^= 0b1000000;
             uint8_t buffer[2];
-            for(uint8_t i = 0; i < 2, i++){
+            for(uint8_t i = 0; i < 2; i++){
               buffer[i] = AlarmNU[(selectedAlarm - 1) * 2 + i];
             }
-            modifyU(selectedAlarm - 1, uint8_t* buffer)
+            AT24C32::modifyU(selectedAlarm - 1, buffer);
           }
         }
-        else if(btDroiteLastState && setupRight){
+        else if(btDroiteLastState && !setupRight){
           btDroiteLastState = false;
         }
       }
-      else if(setupUp || setupDown){
-        uint8_t maxSelectedAlarm = selectedType ? nbAlarm & 0b00001111 : nbAlarm >> 4;
-        if((selectedAlarm + setupDown < maxSelectedAlarm + 1) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir
-          selectedAlarm = selectedAlarm - setupUp + setupDown;
+      else if(setupUp || setupDown || UDHysteresis){
+        if(!UDHysteresis){
+          UDHysteresis = true;
+          uint8_t maxSelectedAlarm = selectedType ? nbAlarm & 0b00001111 : nbAlarm >> 4;
+          if((selectedAlarm + setupDown < maxSelectedAlarm + 1) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir
+            selectedAlarm = selectedAlarm - setupUp + setupDown;
+          }
         }
-        // ajout d'un cycle d'hystérésis
+        else if(UDHysteresis && !setupUp && !setupDown){
+          UDHysteresis = false;
+        }
       }
       else if(setupEnd){
         menuReveilInit = false; // reset de l'initialisation du mode menu reveil
@@ -1015,7 +1021,6 @@ ISR(PCINT2_vect) {
     RTCFlag = true; // on force un affichage
   }
   else if(digitalRead(btSetup)){
-    Serial.println("test ISR setup");
     mode = 1;
   }
   else if(digitalRead(btDroite)){
