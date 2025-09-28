@@ -99,13 +99,15 @@ const uint8_t chiffres[10] = {
 
 //PIN des bouton
 uint8_t btPlus = 2;         // bouton + sur D2 / PIN 4 / PCINT18
-bool btPlusLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup.
+bool btPlusLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
 uint8_t btMoins = 3;        // bouton - sur D3 / PIN 5 / PCINT19
-bool btMoinsLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup.
+bool btMoinsLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
 uint8_t btSetup = 4;        // bouton setup sur D4 / PIN 6 / PCINT20
 uint8_t btA = 5;            // bouton au dessus du reveil sur D5 / PIN 11 / PCINT21
 uint8_t btGauche = 6;       // bouton gauche sur D6 / PIN 12 / PCINT22
+bool btGaucheLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
 uint8_t btDroite = 7;       // bouton droite sur D7 / PIN 13 / PCINT23
+bool btDroiteLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
 
 void setup() { //-------------------------------------------------setup
   double setupTimer = millis(); // calcul du temps de setup
@@ -684,33 +686,45 @@ void loop() { //-------------------------------------------------loop
           setupSwitchStillUp = digitalRead(btSetup);
         }
       }
-      /*
+      
       // partie bouton
-      const bool setupUp = digitalread(btHaut); // plus grande prio
+      const bool setupUp = digitalread(btHaut); // Plus grande prio
       const bool setupDown = digitalread(btBas);
       const bool setupRight = digitalread(btDroite);
       const bool setupLeft = digitalread(btGauche);
-      const bool setupEnd = digitalread(boutonEnd); // plus petite prio
-      if(setupLeft){
-        selectedType = !selectedType;
-      }
-      else if(setupRight){
-        //activer, désactiver
-        if(selectedType){
-          AlarmNU[(selectedAlarm - 1) * 3] ^= 0b1000000;
-          uint8_t buffer[3];
-          for(uint8_t i = 0; i < 3, i++){
-            buffer[i] = AlarmNU[(selectedAlarm - 1) * 3 + i];
-          }
-          modifyNU(selectedAlarm - 1, uint8_t* buffer)
+      const bool setupEnd = digitalread(boutonEnd); // Plus petite prio
+      if(setupLeft || btGaucheLastState){
+        if(!btGaucheLastState){
+          btGaucheLastState = true;
+          selectedType = !selectedType;
         }
-        else{
-          AlarmU[(selectedAlarm - 1) * 2] ^= 0b1000000;
-          uint8_t buffer[2];
-          for(uint8_t i = 0; i < 2, i++){
-            buffer[i] = AlarmNU[(selectedAlarm - 1) * 2 + i];
+        else if(btGaucheLastState && !setupLeft){
+          btGaucheLastState = false;
+        }
+      }
+      else if(setupRight || btDroiteLastState){
+        if(!btDroiteLastState){
+          btDroiteLastState = true;
+          //activer, désactiver
+          if(selectedType){
+            AlarmNU[(selectedAlarm - 1) * 3] ^= 0b1000000;
+            uint8_t buffer[3];
+            for(uint8_t i = 0; i < 3, i++){
+              buffer[i] = AlarmNU[(selectedAlarm - 1) * 3 + i];
+            }
+            modifyNU(selectedAlarm - 1, uint8_t* buffer)
           }
-          modifyU(selectedAlarm - 1, uint8_t* buffer)
+          else{
+            AlarmU[(selectedAlarm - 1) * 2] ^= 0b1000000;
+            uint8_t buffer[2];
+            for(uint8_t i = 0; i < 2, i++){
+              buffer[i] = AlarmNU[(selectedAlarm - 1) * 2 + i];
+            }
+            modifyU(selectedAlarm - 1, uint8_t* buffer)
+          }
+        }
+        else if(btDroiteLastState && setupRight){
+          btDroiteLastState = false;
         }
       }
       else if(setupUp || setupDown){
@@ -718,15 +732,22 @@ void loop() { //-------------------------------------------------loop
         if((selectedAlarm + setupDown < maxSelectedAlarm + 1) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir
           selectedAlarm = selectedAlarm - setupUp + setupDown;
         }
+        // ajout d'un cycle d'hystérésis
       }
       else if(setupEnd){
         menuReveilInit = false; // reset de l'initialisation du mode menu reveil
         mode = 0; // on passe en mode normal
         RTCFlag = true; // on force un flag d'affichage normal
-        PCICR = (1 << PCIE1) | (1 << PCIE2); // desactiver les interruptions pendant le setup
+        bool setupSwitchStillUp = digitalRead(btSetup); // On attend d'avoir relacher le bouton setup pour sortir, pour ne pas avoir une interruptions et revenir directement dans mode 1
+        refreshNextAlarmDislpay = true;
+        while(setupSwitchStillUp){
+          delay(10);
+          setupSwitchStillUp = digitalRead(btSetup);
+        }
+        PCICR = (1 << PCIE1) | (1 << PCIE2); // Réactiver les interruptions à la fin
         return; // on force le redemarrage de loop()
       }
-      */
+      
 
       //display
       if(selectedAlarm == 0){ // ecran retour
