@@ -10,8 +10,9 @@ class MAX7219 {
     static void begin(uint8_t din, uint8_t clk);  // configure DIN/CLK partagés
 
     //fonction
-    void send(uint8_t address, uint8_t data);          // fonction d'écriture : address = DIGx et data = SEG0-7
-    void init();                                       // initialisation du MAX7219CNG
+    void send(uint8_t address, uint8_t data);         // fonction d'écriture : address = DIGx et data = SEG0-7
+    void init();                                      // initialisation du MAX7219CNG
+    void Brightness(uint8_t brightness);              // Fonction pour modifier l'intensité lumineuse
 
   private:
     //variable

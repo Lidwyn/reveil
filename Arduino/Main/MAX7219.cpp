@@ -58,3 +58,7 @@ void MAX7219::init() {                                  // initialisation du MAX
     send(i, 0x00);
   }
 }
+
+void MAX7219::Brightness(uint8_t brightness){
+  send(0x0A, 0x0F & brightness);
+}

@@ -46,6 +46,11 @@ uint8_t selected = 1; // 0: heure, 1: minutes, 2: secondes, 3: jour(date), 4: mo
 unsigned long lastBlink = 0; // variable de test pour le clignotement du setup
 bool setupIsBlinking = 0; // 0: éteint, 1: allumé
 const unsigned long blinkTime = 500; // clignotement de 500ms (f = 1Hz)
+unsigned long BtLastReg = 0; // Variable de dernière itération de l'utilisation du bouton (haut ou bas)
+const unsigned long BtRegPeriod = 100; // Période entre chaque itération de l'utilisation du bouton
+const unsigned long BtRegFirstPeriod = 500; // Période avant la première itération de l'utilisation du bouton
+bool FirstRegDone = false; // Sert à savoir si la premère itération a été réalisée
+bool LRHysteresis = false; // Variable permettant la mise en place d'un cycle d'hystérésis sur l'utilisation des boutons gauche et droite
 
 //variable du menu reveil
 uint8_t selectedAlarm = 1; // alarme selectionnée
@@ -75,6 +80,8 @@ volatile bool nightMode = false;
 MAX7219 myMAX7219_1(10);
 MAX7219 myMAX7219_2(9);
 bool ddot = true; //variable d'affichage des deux points
+volatile uint8_t brightness = 0x03; // Variable de luminosité des afficheurs (entre 0x00 et 0x0F)
+volatile bool brightnessFlag = false;
 
 //code d'affichage des chiffres pour les MAX7219/7seg respectivement de 0 à 9
 const uint8_t chiffres[10] = {
@@ -92,7 +99,9 @@ const uint8_t chiffres[10] = {
 
 //PIN des bouton
 uint8_t btPlus = 2;         // bouton + sur D2 / PIN 4 / PCINT18
+bool btPlusLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup.
 uint8_t btMoins = 3;        // bouton - sur D3 / PIN 5 / PCINT19
+bool btMoinsLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup.
 uint8_t btSetup = 4;        // bouton setup sur D4 / PIN 6 / PCINT20
 uint8_t btA = 5;            // bouton au dessus du reveil sur D5 / PIN 11 / PCINT21
 uint8_t btGauche = 6;       // bouton gauche sur D6 / PIN 12 / PCINT22
@@ -310,7 +319,12 @@ void setup() { //-------------------------------------------------setup
 
 void loop() { //-------------------------------------------------loop
   if(mode == 0){ //----------------------------------------------normal
-    if (RTCFlag){
+    if(brightnessFlag){
+      myMAX7219_1.Brightness(brightness);
+      myMAX7219_2.Brightness(brightness);
+      brightnessFlag = false;
+    }
+    if(RTCFlag){
       double loopTimer = millis(); // calcul du temps
       RTCFlag = false;
       if(!nightMode){
@@ -388,22 +402,71 @@ void loop() { //-------------------------------------------------loop
         setupSwitchStillUp = digitalRead(btSetup);
       }
     }
+    
+    unsigned long now = millis(); // Dans le mode 1 et 2 on utilise plus les interruptions du DS3231 mais millis pour le clignotement et autre
 
     
-    // partie bouton
-    const bool setupUp = digitalRead(btPlus); // plus grande prio
+    // Partie bouton
+    const bool setupUp = digitalRead(btPlus); // Plus grande prio
     const bool setupDown = digitalRead(btMoins);
     const bool setupRight = digitalRead(btDroite);
     const bool setupLeft = digitalRead(btGauche);
-    const bool setupEnd = digitalRead(btSetup); // plus petite prio
-    if(setupUp || setupDown){
-      isSetting = modifyIsSetting(selected, setupUp, isSetting);
+    const bool setupEnd = digitalRead(btSetup); // Plus petite prio
+    if(setupUp || setupDown || btPlusLastState || btMoinsLastState){ // Détection haut ou bas
+      // Gestion des boutons haut et bas avec une orientation sur la fluidité d'utilisation (asynchrone avec l'itération de la boucle loop)
+      // Cela permet d'appuyer sur le bouton quand on veut et pouvoir rester appuyer sans que ça bouger trop rapidement. C'est une sorte de cycle d'hystérésis
+      if(btPlusLastState){
+        if(setupUp){ // Cas où on garde le bouton appuyé
+          const unsigned long periodTmp = FirstRegDone ? BtRegPeriod : BtRegFirstPeriod; // Choix de la période différent si c'est la première
+          if(now - periodTmp >= BtLastReg){ // Itération tous les 100 ms (valeur initiale)
+            BtLastReg = now;
+            isSetting = modifyIsSetting(selected, true, isSetting); // Seulement dans ce cas on modifie, sinon rien
+            if(!FirstRegDone){FirstRegDone = true;}
+          }
+        }
+        else {
+          btPlusLastState = false;  // Bouton relaché
+          BtLastReg = 0;  // Permet des appui rapide
+          FirstRegDone = false;
+        }
+      }
+      else if(btMoinsLastState){
+        if(setupDown){ // Cas où on garde le bouton appuyé
+          const unsigned long periodTmp = FirstRegDone ? BtRegPeriod : BtRegFirstPeriod; // Choix de la période différent si c'est la première
+          if(now - periodTmp >= BtLastReg){
+            BtLastReg = now;
+            isSetting = modifyIsSetting(selected, false, isSetting);
+            if(!FirstRegDone){FirstRegDone = true;}
+          }
+        }
+        else {
+          btMoinsLastState = false;
+          BtLastReg = 0;
+          FirstRegDone = false;
+        }
+      }
+      else { // cas premier appui
+        isSetting = modifyIsSetting(selected, setupUp, isSetting);
+        BtLastReg = now;
+        if(setupUp){
+          btPlusLastState = true;
+        }
+        else{
+          btMoinsLastState = true;
+        }
+      }
     }
-    else if(setupRight || setupLeft){
-      if((selected + setupRight < 7) && (selected - setupLeft >= 0)){ // on test pour ne pas sortir de [0;6]
-        saveSetup(selected, isSetting); // on sauvegarde la valeur qu'on vient d'ajutster
-        selected = setupRight ? selected + 1 : selected - 1; // on déplace le curseur
-        isSetting = setupSelectNew(selected, newTimeData);
+    else if(setupRight || setupLeft || LRHysteresis){
+      if(!LRHysteresis && (setupRight || setupLeft)){ // Detection du premier appui
+        if((selected + setupRight < 7) && (selected - setupLeft >= 0)){ // on test pour ne pas sortir de [0;6]
+          saveSetup(selected, isSetting); // on sauvegarde la valeur qu'on vient d'ajutster
+          selected = setupRight ? selected + 1 : selected - 1; // on déplace le curseur
+          isSetting = setupSelectNew(selected, newTimeData);
+        }
+        LRHysteresis = true; // Activation du cycle d'hystérésis
+      }
+      else if(LRHysteresis && !setupRight && !setupLeft){
+        LRHysteresis = false; // Désactivation du cycle d'hystérésis
       }
     }
     else if(setupEnd){
@@ -423,7 +486,6 @@ void loop() { //-------------------------------------------------loop
     }
 
     // test cligno
-    unsigned long now = millis();
     if(now - lastBlink > blinkTime){
       lastBlink = now;
       setupIsBlinking = !setupIsBlinking;
@@ -615,6 +677,12 @@ void loop() { //-------------------------------------------------loop
         selectedAlarm = 1; // première alarme
         selectedType = false; // alarme de type non unique
         confirmDelete = false;
+        // Cycle hysteresis du bouton setupEnd (/!\ stop le programme, mais ça n'est pas particulièrement important);
+        bool setupSwitchStillUp = digitalRead(btSetup);
+        while(setupSwitchStillUp){
+          delay(10);
+          setupSwitchStillUp = digitalRead(btSetup);
+        }
       }
       /*
       // partie bouton
@@ -892,7 +960,6 @@ void loop() { //-------------------------------------------------loop
     }
     delay(50);
   }
-  delay(50);
 } //-------------------------------------------------------------end loop
 
 // Interruption sur tout changement d’état de A3 (PCINT11)
@@ -910,10 +977,16 @@ ISR(PCINT1_vect) { //--------------------------------------------ISR
 
 ISR(PCINT2_vect) {
   if(digitalRead(btPlus)){
-    //lumière up;
+    if(brightness < 0x0F){
+      brightness++;
+      brightnessFlag = true;
+    }
   }
   else if(digitalRead(btMoins)){
-    //lumière down;
+    if(brightness > 0x00){
+      brightness--;
+      brightnessFlag = true;
+    }
   }
   else if(digitalRead(btA)){
     nightMode = !nightMode; // switch de l'affichage
