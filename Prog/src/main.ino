@@ -706,22 +706,42 @@ void loop() { //-------------------------------------------------loop
       else if(setupRight || btDroiteLastState){
         if(!btDroiteLastState){
           btDroiteLastState = true;
-          //activer, désactiver
-          if(selectedType){
-            AlarmNU[(selectedAlarm - 1) * 3] ^= 0b1000000;
-            uint8_t buffer[3];
-            for(uint8_t i = 0; i < 3; i++){
-              buffer[i] = AlarmNU[(selectedAlarm - 1) * 3 + i];
+          uint8_t maxSelectedAlarm = selectedType ? nbAlarm & 0b00001111 : nbAlarm >> 4;
+          if(selectedAlarm != 0){
+            if(selectedAlarm < maxSelectedAlarm + 1){
+              //activer, désactiver
+              if(!selectedType){
+                AlarmNU[(selectedAlarm - 1) * 3] ^= 0b10000000;
+                Serial.println(AlarmU[(selectedAlarm - 1) * 3], BIN);
+                uint8_t buffer[3];
+                for(uint8_t i = 0; i < 3; i++){
+                  buffer[i] = AlarmNU[(selectedAlarm - 1) * 3 + i];
+                }
+                AT24C32::modifyNU(selectedAlarm - 1, buffer);
+              }
+              else{
+                AlarmU[(selectedAlarm - 1) * 2] ^= 0b10000000;
+                Serial.println("Switch");
+                uint8_t buffer[2];
+                for(uint8_t i = 0; i < 2; i++){
+                  buffer[i] = AlarmNU[(selectedAlarm - 1) * 2 + i];
+                }
+                AT24C32::modifyU(selectedAlarm - 1, buffer);
+              }
             }
-            AT24C32::modifyNU(selectedAlarm - 1, buffer);
           }
-          else{
-            AlarmU[(selectedAlarm - 1) * 2] ^= 0b1000000;
-            uint8_t buffer[2];
-            for(uint8_t i = 0; i < 2; i++){
-              buffer[i] = AlarmNU[(selectedAlarm - 1) * 2 + i];
+          else{ // Escape alarm menu
+            menuReveilInit = false; // reset de l'initialisation du mode menu reveil
+            mode = 0; // on passe en mode normal
+            RTCFlag = true; // on force un flag d'affichage normal
+            bool setupSwitchStillUp = digitalRead(btDroite); // On attend d'avoir relacher le bouton setup pour sortir, pour ne pas avoir une interruptions et revenir directement dans mode 1
+            refreshNextAlarmDislpay = true;
+            while(setupSwitchStillUp){
+              delay(10);
+              setupSwitchStillUp = digitalRead(btDroite);
             }
-            AT24C32::modifyU(selectedAlarm - 1, buffer);
+            PCICR = (1 << PCIE1) | (1 << PCIE2); // Réactiver les interruptions à la fin
+            return; // on force le redemarrage de loop()
           }
         }
         else if(btDroiteLastState && !setupRight){
@@ -732,7 +752,7 @@ void loop() { //-------------------------------------------------loop
         if(!UDHysteresis){
           UDHysteresis = true;
           uint8_t maxSelectedAlarm = selectedType ? nbAlarm & 0b00001111 : nbAlarm >> 4;
-          if((selectedAlarm + setupDown < maxSelectedAlarm + 1) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir
+          if((selectedAlarm + setupDown < maxSelectedAlarm + 2) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir - + 2 due to esc- mode and new alarm
             selectedAlarm = selectedAlarm - setupUp + setupDown;
           }
         }
@@ -742,25 +762,20 @@ void loop() { //-------------------------------------------------loop
       }
       else if(setupEnd){
         menuReveilInit = false; // reset de l'initialisation du mode menu reveil
-        mode = 0; // on passe en mode normal
-        RTCFlag = true; // on force un flag d'affichage normal
+        settingAlarm = true; // Going to Alarm setting mode
         bool setupSwitchStillUp = digitalRead(btSetup); // On attend d'avoir relacher le bouton setup pour sortir, pour ne pas avoir une interruptions et revenir directement dans mode 1
-        refreshNextAlarmDislpay = true;
         while(setupSwitchStillUp){
           delay(10);
           setupSwitchStillUp = digitalRead(btSetup);
         }
-        PCICR = (1 << PCIE1) | (1 << PCIE2); // Réactiver les interruptions à la fin
-        return; // on force le redemarrage de loop()
       }
-      
 
       //display
       if(selectedAlarm == 0){ // ecran retour
-        myMAX7219_1.send(4, 0b01001111);
-        myMAX7219_1.send(3, 0b01011011);
-        myMAX7219_1.send(2, 0b01001110);
-        myMAX7219_1.send(1, 0b00000001);
+        myMAX7219_1.send(4, 0b01001111); // E
+        myMAX7219_1.send(3, 0b01011011); // S
+        myMAX7219_1.send(2, 0b01001110); // C
+        myMAX7219_1.send(1, 0b00000001); // -
         myMAX7219_1.send(5, 0);
         myMAX7219_2.send(4, 0);
         myMAX7219_2.send(3, 0);
@@ -776,13 +791,16 @@ void loop() { //-------------------------------------------------loop
             myMAX7219_1.send(3, chiffres[AlarmNU[(selectedAlarm - 1) * 3 + 1] & 0b00001111]);
             myMAX7219_1.send(2, chiffres[(AlarmNU[(selectedAlarm - 1) * 3] & 0b01110000)>>4]);
             myMAX7219_1.send(1, chiffres[AlarmNU[(selectedAlarm - 1) * 3] & 0b00001111]);
-            myMAX7219_1.send(5, (AlarmNU[(selectedAlarm - 1) * 3] & 0b10000000)>>1);
+            myMAX7219_1.send(5, (AlarmNU[(selectedAlarm - 1) * 3] & 0b10000000)>>1); // Alarm Activated indicator on ddot
+            //Serial.print(AlarmNU[(selectedAlarm - 1) * 3], BIN);
+            //Serial.print(" - ");
+            //Serial.println((AlarmNU[(selectedAlarm - 1) * 3] & 0b10000000)>>1, BIN);
             myMAX7219_2.send(5, AlarmNU[(selectedAlarm - 1) * 3 + 2]);
             if(!confirmDelete){
               myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
               myMAX7219_2.send(3, chiffres[selectedAlarm % 10]);
-              myMAX7219_2.send(2, 0b00000001);
-              myMAX7219_2.send(1, chiffres[0]);
+              myMAX7219_2.send(2, 0b00000001); // -
+              myMAX7219_2.send(1, chiffres[0]); // 0 = Non unique alarm
             }
             else{
               myMAX7219_2.send(4, 0b01011011);
@@ -818,7 +836,7 @@ void loop() { //-------------------------------------------------loop
               myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
               myMAX7219_2.send(3, chiffres[selectedAlarm % 10]);
               myMAX7219_2.send(2, 0b00000001);
-              myMAX7219_2.send(1, chiffres[1]);
+              myMAX7219_2.send(1, chiffres[1]); // 1 = Unique alarm
             }
             else{
               myMAX7219_2.send(4, 0b01011011);
@@ -837,7 +855,7 @@ void loop() { //-------------------------------------------------loop
             myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
             myMAX7219_2.send(3, chiffres[selectedAlarm % 10]);
             myMAX7219_2.send(2, 0b00000001);
-            myMAX7219_2.send(1, chiffres[0]);
+            myMAX7219_2.send(1, chiffres[1]);
             myMAX7219_2.send(5, 0);
           }
         }
@@ -851,17 +869,11 @@ void loop() { //-------------------------------------------------loop
           newTimeData[1] = selectedType ? AlarmU[(selectedAlarm - 1) * 3 + 1] : AlarmNU[(selectedAlarm - 1) * 3 + 1];
           newTimeData[2] = selectedType ? 0 : AlarmNU[(selectedAlarm - 1) * 3 + 2];
         }
-        else{
+        else{ // change to 12h30 and armed
           newTimeData[0] = 0;
           newTimeData[1] = 0;
           newTimeData[2] = 0;
         }
-        Serial.print("val newTimeData : ");
-        Serial.print(newTimeData[0], BIN);
-        Serial.print(" : ");
-        Serial.print(newTimeData[1], BIN);
-        Serial.print(" : ");
-        Serial.print(newTimeData[2], BIN);
         selected = 0;
         isSetting = newTimeData[0];
         setupIsBlinking = false;
