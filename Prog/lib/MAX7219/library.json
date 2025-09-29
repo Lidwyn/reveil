@@ -1,0 +1,10 @@
+{
+  "name": "MAX7219",
+  "version": "1.0.0",
+  "description": "Library that handle the SPI bus for the MAX7219 and it's display, can work with multiple MAX7219",
+  "authors": [
+    {
+      "name": "Lidwyn"
+    }
+  ]
+}

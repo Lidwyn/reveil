@@ -328,7 +328,7 @@ void loop() { //-------------------------------------------------loop
       brightnessFlag = false;
     }
     if(RTCFlag){
-      double loopTimer = millis(); // calcul du temps
+      //double loopTimer = millis(); // calcul du temps
       RTCFlag = false;
       if(!nightMode){
         //display time

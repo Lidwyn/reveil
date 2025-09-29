@@ -3,4 +3,10 @@ Latex/Manuel.fdb_latexmk
 Latex/Manuel.fls
 Latex/Manuel.log
 Latex/Manuel.synctex.gz
+
 Local/
+
+Prog/.pio/
+Prog/test/
+
+Prog/Minicore/

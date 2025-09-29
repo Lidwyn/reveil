@@ -1,0 +1,10 @@
+{
+  "name": "DS3231",
+  "version": "1.0.0",
+  "description": "DS3231 RTC module's library",
+  "authors": [
+    {
+      "name": "Lidwyn"
+    }
+  ]
+}
