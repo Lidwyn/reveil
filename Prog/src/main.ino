@@ -675,7 +675,7 @@ void loop() { //-------------------------------------------------loop
       // Mode selection
       if(!menuReveilInit){
         menuReveilInit = true;
-        nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
+        //nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
         selectedAlarm = 1; // Première alarme
         selectedType = false; // Alarme de type non unique
         confirmDelete = false;
@@ -712,30 +712,33 @@ void loop() { //-------------------------------------------------loop
               //activer, désactiver
               if(!selectedType){
                 AlarmNU[(selectedAlarm - 1) * 3] ^= 0b10000000;
-                Serial.println(AlarmU[(selectedAlarm - 1) * 3], BIN);
                 uint8_t buffer[3];
                 for(uint8_t i = 0; i < 3; i++){
                   buffer[i] = AlarmNU[(selectedAlarm - 1) * 3 + i];
                 }
-                AT24C32::modifyNU(selectedAlarm - 1, buffer);
+                AT24C32::modifyNU(selectedAlarm, buffer);
               }
               else{
                 AlarmU[(selectedAlarm - 1) * 2] ^= 0b10000000;
-                Serial.println("Switch");
                 uint8_t buffer[2];
                 for(uint8_t i = 0; i < 2; i++){
-                  buffer[i] = AlarmNU[(selectedAlarm - 1) * 2 + i];
+                  buffer[i] = AlarmU[(selectedAlarm - 1) * 2 + i];
                 }
-                AT24C32::modifyU(selectedAlarm - 1, buffer);
+                AT24C32::modifyU(selectedAlarm, buffer);
               }
+              nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
             }
           }
           else{ // Escape alarm menu
             menuReveilInit = false; // reset de l'initialisation du mode menu reveil
             mode = 0; // on passe en mode normal
             RTCFlag = true; // on force un flag d'affichage normal
+            nbAlarm = AT24C32::readAll(AlarmNU, AlarmU); // Refresh nbAlarm : number of stored alarm
+            nbActive = AT24C32::readActive(ActiveNU, ActiveU); // Refresh nbActive : number of stored alarm which are active/enable
+            nextAlarmIndex = findNextActiveAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f); // Looking for next alarmIndex
+            displayAlarm(nextAlarmIndex, ActiveNU, ActiveU, displayNextAlarm); // Formating displayNextAlarm
+            refreshNextAlarmDislpay = true; // Force NextAlarm display on the next mode 0 frame
             bool setupSwitchStillUp = digitalRead(btDroite); // On attend d'avoir relacher le bouton setup pour sortir, pour ne pas avoir une interruptions et revenir directement dans mode 1
-            refreshNextAlarmDislpay = true;
             while(setupSwitchStillUp){
               delay(10);
               setupSwitchStillUp = digitalRead(btDroite);
@@ -760,7 +763,7 @@ void loop() { //-------------------------------------------------loop
           UDHysteresis = false;
         }
       }
-      else if(setupEnd){
+      else if(setupEnd && (selectedAlarm != 0)){
         menuReveilInit = false; // reset de l'initialisation du mode menu reveil
         settingAlarm = true; // Going to Alarm setting mode
         bool setupSwitchStillUp = digitalRead(btSetup); // On attend d'avoir relacher le bouton setup pour sortir, pour ne pas avoir une interruptions et revenir directement dans mode 1
@@ -792,9 +795,6 @@ void loop() { //-------------------------------------------------loop
             myMAX7219_1.send(2, chiffres[(AlarmNU[(selectedAlarm - 1) * 3] & 0b01110000)>>4]);
             myMAX7219_1.send(1, chiffres[AlarmNU[(selectedAlarm - 1) * 3] & 0b00001111]);
             myMAX7219_1.send(5, (AlarmNU[(selectedAlarm - 1) * 3] & 0b10000000)>>1); // Alarm Activated indicator on ddot
-            //Serial.print(AlarmNU[(selectedAlarm - 1) * 3], BIN);
-            //Serial.print(" - ");
-            //Serial.println((AlarmNU[(selectedAlarm - 1) * 3] & 0b10000000)>>1, BIN);
             myMAX7219_2.send(5, AlarmNU[(selectedAlarm - 1) * 3 + 2]);
             if(!confirmDelete){
               myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
@@ -869,39 +869,110 @@ void loop() { //-------------------------------------------------loop
           newTimeData[1] = selectedType ? AlarmU[(selectedAlarm - 1) * 3 + 1] : AlarmNU[(selectedAlarm - 1) * 3 + 1];
           newTimeData[2] = selectedType ? 0 : AlarmNU[(selectedAlarm - 1) * 3 + 2];
         }
-        else{ // change to 12h30 and armed
-          newTimeData[0] = 0;
-          newTimeData[1] = 0;
+        else{ // New alarms set at 12h30 and armed
+          newTimeData[0] = (3 << 4) & 0b10000000;
+          newTimeData[1] = (1 << 4) | 2;
           newTimeData[2] = 0;
         }
         selected = 0;
-        isSetting = newTimeData[0];
+        isSetting = setupAlarmSelectNew(selected, newTimeData);
         setupIsBlinking = false;
       }
-
-      /*
+      
+      unsigned long now = millis();
+      
       // partie bouton
-      const bool setupUp = digitalread(btHaut); // plus grande prio
-      const bool setupDown = digitalread(btBas);
-      const bool setupRight = digitalread(btDroite);
-      const bool setupLeft = digitalread(btGauche);
-      const bool setupEnd = digitalread(boutonEnd); // plus petite prio
-      if(setupUp || setupDown){
-        isSetting = modifyAlarmIsSetting(selected, setupUp, isSetting);
-      }
-      else if(setupRight || setupLeft){
-        if((selected + setupRight < 3) && (selected - setupLeft >= 0)){ // on test pour ne pas sortir de [0;6]
-          newTimeData[selected] = isSetting;
-          if(!selectedType){
-            AT24C32::modifyNU(selectedAlarm, newTimeData);
+      const bool setupUp = digitalRead(btPlus); // Plus grande prio
+      const bool setupDown = digitalRead(btMoins);
+      const bool setupRight = digitalRead(btDroite);
+      const bool setupLeft = digitalRead(btGauche);
+      const bool setupEnd = digitalRead(btSetup); // Plus petite prio
+      if(setupUp || setupDown || btPlusLastState || btMoinsLastState){ // Détection haut ou bas
+        // Gestion des boutons haut et bas avec une orientation sur la fluidité d'utilisation (asynchrone avec l'itération de la boucle loop)
+        // Cela permet d'appuyer sur le bouton quand on veut et pouvoir rester appuyer sans que ça bouger trop rapidement. C'est une sorte de cycle d'hystérésis
+        if(selected < 2){
+          if(btPlusLastState){
+            if(setupUp){ // Cas où on garde le bouton appuyé
+              const unsigned long periodTmp = FirstRegDone ? BtRegPeriod : BtRegFirstPeriod; // Choix de la période différent si c'est la première
+              if(now - periodTmp >= BtLastReg){ // Itération tous les 100 ms (valeur initiale)
+                BtLastReg = now;
+                isSetting = modifyAlarmIsSetting(selected, true, isSetting); // Seulement dans ce cas on modifie, sinon rien
+                if(!FirstRegDone){FirstRegDone = true;}
+              }
+            }
+            else{
+              btPlusLastState = false;  // Bouton relaché
+              BtLastReg = 0;  // Permet des appui rapide
+              FirstRegDone = false;
+            }
           }
-          else{
-            AT24C32::modifyU(selectedAlarm, newTimeData);
+          else if(btMoinsLastState){
+            if(setupDown){ // Cas où on garde le bouton appuyé
+              const unsigned long periodTmp = FirstRegDone ? BtRegPeriod : BtRegFirstPeriod; // Choix de la période différent si c'est la première
+              if(now - periodTmp >= BtLastReg){
+                BtLastReg = now;
+                isSetting = modifyAlarmIsSetting(selected, false, isSetting);
+                if(!FirstRegDone){FirstRegDone = true;}
+              }
+            }
+            else{
+              btMoinsLastState = false;
+              BtLastReg = 0;
+              FirstRegDone = false;
+            }
           }
-          selected = setupRight ? selected + 1 : selected - 1; // on déplace le curseur
+          else{ // cas premier appui
+            isSetting = modifyAlarmIsSetting(selected, setupUp, isSetting);
+            BtLastReg = now;
+            if(setupUp){
+              btPlusLastState = true;
+            }
+            else{
+              btMoinsLastState = true;
+            }
+          }
+        }
+        else{
+          if(btPlusLastState && !setupUp){ // Releasing up switch
+            btPlusLastState = false;
+          }
+          else if(btMoinsLastState && !setupDown){
+            btMoinsLastState = false;
+          }
+          else if(!btPlusLastState && !btMoinsLastState){
+            if(setupUp){
+              isSetting |= 1 << (selected - 2);
+              btPlusLastState = true;
+            }
+            else{
+              isSetting &= ~(1 << (selected - 2));
+            btMoinsLastState = true;
+            }
+          }
         }
       }
-      else if(setupEnd){newTimeData[selected] = isSetting;
+      else if(setupRight || setupLeft || LRHysteresis){
+        if(!LRHysteresis && (setupRight || setupLeft)){ // Detection du premier appui
+          uint8_t maxSelected = !selectedType ? 9 : 2;
+          if((selected + setupRight < maxSelected) && (selected - setupLeft >= 0)){ // on test pour ne pas sortir de [0;6]
+            saveAlarm(selected, isSetting, newTimeData);
+            if(!selectedType){
+              AT24C32::modifyNU(selectedAlarm, newTimeData);
+            }
+            else{
+              AT24C32::modifyU(selectedAlarm, newTimeData);
+            }
+            selected = setupRight ? selected + 1 : selected - 1; // on déplace le curseur
+            isSetting = setupAlarmSelectNew(selected, newTimeData);
+          }
+          LRHysteresis = true; // Activation du cycle d'hystérésis
+        }
+        else if(LRHysteresis && !setupRight && !setupLeft){
+          LRHysteresis = false; // Désactivation du cycle d'hystérésis
+        }
+      }
+      else if(setupEnd){
+        saveAlarm(selected, isSetting, newTimeData);
         if(!selectedType){
           AT24C32::modifyNU(selectedAlarm, newTimeData);
         }
@@ -909,11 +980,15 @@ void loop() { //-------------------------------------------------loop
           AT24C32::modifyU(selectedAlarm, newTimeData);
         }
         settingAlarmInit = false; // reset de l'initialisation du mode setup
+        settingAlarm = false;
+        bool setupSwitchStillUp = digitalRead(btSetup); // On attend d'avoir relacher le bouton setup pour sortir, pour ne pas avoir une interruptions et revenir directement dans mode 1
+        while(setupSwitchStillUp){
+          delay(10);
+          setupSwitchStillUp = digitalRead(btSetup);
+        }
         return; // on force le redemarrage de loop()
       }
-      */
 
-      unsigned long now = millis();
       if(now - lastBlink > blinkTime){
         lastBlink = now;
         setupIsBlinking = !setupIsBlinking;
@@ -972,7 +1047,7 @@ void loop() { //-------------------------------------------------loop
         }
         default:{ // jour de la semaine, pour les alarmes unique on a pas besoin de ça (test réalisé en amont)
             myMAX7219_2.send(4, chiffres[selected - 1]);
-            myMAX7219_2.send(5, newTimeData[2]);
+            myMAX7219_2.send(5, isSetting);
           if(setupIsBlinking){
             myMAX7219_1.send(4, chiffres[(newTimeData[1] & 0b00110000)>>4]);
             myMAX7219_1.send(3, chiffres[newTimeData[1] & 0b00001111]);
@@ -997,7 +1072,7 @@ void loop() { //-------------------------------------------------loop
         }
       }
     }
-    delay(50);
+    delay(10);
   }
 } //-------------------------------------------------------------end loop
 
@@ -1045,13 +1120,13 @@ uint8_t AlarmSetupSelectNew(const uint8_t newSelected, const uint8_t* nTD){
   const uint8_t table[8] = {
     1, // heure
     0, // minute
-    2, 2, 2, 2, 2, 2 // jour de la semaine
+    2// jour de la semaine
   };
   return nTD[table[newSelected]];
 }
 
 uint8_t modifyAlarmIsSetting(const uint8_t selectedParam, const bool setupUp, uint8_t data){
-  const uint8_t bounds[7][2] = {
+  const uint8_t bounds[2][2] = {
     {23, 0}, // heure entre 0 et 23
     {59, 0} // minute entre 0 et 59
   };
@@ -1083,6 +1158,15 @@ uint8_t setupSelectNew(const uint8_t newSelected, const uint8_t* nTD){
   return nTD[table[newSelected]];
 }
 
+uint8_t setupAlarmSelectNew(const uint8_t newSelected, const uint8_t* nTD){ // Return a value for isSetting as selected 0 is not AlarmU[0]
+  const uint8_t table[9] = {
+    1, // heure
+    0, // minute
+    2, 2, 2, 2, 2, 2, 2 // jour de la semaine
+  };
+  return nTD[table[newSelected]];
+}
+
 void saveSetup(const uint8_t selectedParam, const uint8_t data){
   const uint8_t table[7] = {
     2, // heure
@@ -1094,6 +1178,15 @@ void saveSetup(const uint8_t selectedParam, const uint8_t data){
     3 // jour de la semaine
   };
   DS3231::write1byte(table[selectedParam], data);
+}
+
+void saveAlarm(const uint8_t selectedParam, const uint8_t NewValue, uint8_t* nTD){
+  const uint8_t table[9] = {
+    1, // heure
+    0, // minute
+    2, 2, 2, 2, 2, 2, 2 // jour de la semaine
+  };
+  nTD[table[selectedParam]] = NewValue;
 }
 
 uint8_t modifyIsSetting(const uint8_t selectedParam, const bool setupUp, uint8_t data){

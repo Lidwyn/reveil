@@ -290,12 +290,12 @@ void AT24C32::modifyNU(uint8_t nb, uint8_t* buffer){
       uint8_t bit = __builtin_ctz(lsb) / 2;
       pos = i * 4 + bit;
       b &= b - 1;
-      if(j = nb){
+      if(j == nb){
         notfound = false;
         Wire.beginTransmission(address);
         Wire.write(0x00);
         Wire.write(i);
-        if(buffer[0] & 0b10000000){
+        if(buffer[0] & 0b10000000){ // Changing reg depending on Active state
           Wire.write(readReg[i] | 0b11<<(pos*2));
         }
         else{
@@ -343,12 +343,12 @@ void AT24C32::modifyU(uint8_t nb, uint8_t* buffer){
       uint8_t bit = __builtin_ctz(lsb) / 2;
       pos = i * 4 + bit;
       b &= b - 1;
-      if(j = nb){
+      if(j == nb){
         notfound = false;
         Wire.beginTransmission(address);
         Wire.write(0x00);
         Wire.write(i);
-        if(buffer[0] & 0b10000000){
+        if(buffer[0] & 0b10000000){ // Changing reg depending on Active state
           Wire.write(readReg[i] | 0b11<<(pos*2));
         }
         else{
