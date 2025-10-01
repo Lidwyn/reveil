@@ -165,7 +165,7 @@ void setup() { //-------------------------------------------------setup
 
   //Sleep_mode init
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  if(false){ // bus I2C debug
+  if(true){ // bus I2C debug
     //write eeprom
     /*
     Wire.beginTransmission(AT24C32addr);
@@ -227,7 +227,7 @@ void setup() { //-------------------------------------------------setup
     }
     */
 
-    /*
+    
     //read all eeprom for debug
     Serial.println("--- Read AT24C32 ---");
     uint8_t j = 0;
@@ -243,7 +243,7 @@ void setup() { //-------------------------------------------------setup
       delay(50);
       j++;
     }
-    */
+    
     
 
     /*
@@ -684,7 +684,8 @@ void loop() { //-------------------------------------------------loop
       // Mode selection
       if(!menuReveilInit){
         menuReveilInit = true;
-        //nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
+        nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
+        delay(50);
         selectedAlarm = 1; // Première alarme
         selectedType = false; // Alarme de type non unique
         confirmDelete = false;
@@ -725,7 +726,7 @@ void loop() { //-------------------------------------------------loop
                 for(uint8_t i = 0; i < 3; i++){
                   buffer[i] = AlarmNU[(selectedAlarm - 1) * 3 + i];
                 }
-                AT24C32::modifyNU(selectedAlarm, buffer);
+                AT24C32::modifyNU(selectedAlarm - 1, buffer);
               }
               else{
                 AlarmU[(selectedAlarm - 1) * 2] ^= 0b10000000;
@@ -733,9 +734,10 @@ void loop() { //-------------------------------------------------loop
                 for(uint8_t i = 0; i < 2; i++){
                   buffer[i] = AlarmU[(selectedAlarm - 1) * 2 + i];
                 }
-                AT24C32::modifyU(selectedAlarm, buffer);
+                AT24C32::modifyU(selectedAlarm - 1, buffer);
               }
-              nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
+              delay(20);
+              //nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
             }
           }
           else{ // Escape alarm menu
@@ -744,8 +746,6 @@ void loop() { //-------------------------------------------------loop
             RTCFlag = true; // on force un flag d'affichage normal
             nbAlarm = AT24C32::readAll(AlarmNU, AlarmU); // Refresh nbAlarm : number of stored alarm
             nbActive = AT24C32::readActive(ActiveNU, ActiveU); // Refresh nbActive : number of stored alarm which are active/enable
-            Serial.print("nbActive = ");
-            Serial.println(nbActive, BIN);
             if(nbActive != 0){
               nextAlarmIndex = findNextActiveAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f); // Looking for next alarmIndex
               displayAlarm(nextAlarmIndex, ActiveNU, ActiveU, displayNextAlarm); // Formating displayNextAlarm
@@ -801,10 +801,6 @@ void loop() { //-------------------------------------------------loop
       }
       else{
         if(!selectedType){ // alarme de type non unique
-          Serial.print("selectedAlarm : ");
-          Serial.print(selectedAlarm);
-          Serial.print(" | nbAlarm formated : ");
-          Serial.println((nbAlarm & 0xf0)>>4);
           if((selectedAlarm) <= ((nbAlarm & 0xf0)>>4)){ // Normal display, else : new alarm proposal
             alarmIsNew = false;
             myMAX7219_1.send(4, chiffres[(AlarmNU[(selectedAlarm - 1) * 3 + 1] & 0b00110000)>>4]);
@@ -847,7 +843,7 @@ void loop() { //-------------------------------------------------loop
             myMAX7219_1.send(3, chiffres[AlarmU[(selectedAlarm - 1) * 2 + 1] & 0b00001111]);
             myMAX7219_1.send(2, chiffres[(AlarmU[(selectedAlarm - 1) * 2] & 0b01110000)>>4]);
             myMAX7219_1.send(1, chiffres[AlarmU[(selectedAlarm - 1) * 2] & 0b00001111]);
-            myMAX7219_1.send(5, (AlarmU[(selectedAlarm - 1) * 3] & 0b10000000)>>1); // Alarm Activated indicator on ddot
+            myMAX7219_1.send(5, (AlarmU[(selectedAlarm - 1) * 2] & 0b10000000)>>1); // Alarm Activated indicator on ddot
             myMAX7219_2.send(5, 0);
             if(!confirmDelete){
               myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
@@ -974,10 +970,10 @@ void loop() { //-------------------------------------------------loop
           if((selected + setupRight < maxSelected) && (selected - setupLeft >= 0)){ // on test pour ne pas sortir de [0;6]
             saveAlarm(selected, isSetting, newTimeData);
             if(!selectedType){
-              AT24C32::modifyNU(selectedAlarm, newTimeData);
+              AT24C32::modifyNU(selectedAlarm - 1, newTimeData);
             }
             else{
-              AT24C32::modifyU(selectedAlarm, newTimeData);
+              AT24C32::modifyU(selectedAlarm - 1, newTimeData);
             }
             selected = setupRight ? selected + 1 : selected - 1; // on déplace le curseur
             isSetting = setupAlarmSelectNew(selected, newTimeData);
@@ -991,10 +987,10 @@ void loop() { //-------------------------------------------------loop
       else if(setupEnd){
         saveAlarm(selected, isSetting, newTimeData);
         if(!selectedType){
-          AT24C32::modifyNU(selectedAlarm, newTimeData);
+          AT24C32::modifyNU(selectedAlarm - 1, newTimeData);
         }
         else{
-          AT24C32::modifyU(selectedAlarm, newTimeData);
+          AT24C32::modifyU(selectedAlarm - 1, newTimeData);
         }
         settingAlarmInit = false; // reset de l'initialisation du mode setup
         settingAlarm = false;
@@ -1234,17 +1230,18 @@ uint8_t computeValueInv(const uint8_t value){ // Compute value back to normal
   return (uint8_t(value / 10)<<4) | (uint8_t(value % 10));
 }
 
-bool checkAlarm(uint8_t* time, uint8_t* bufferNU, uint8_t nbNU, uint8_t* bufferU, uint8_t nbU){
+bool checkAlarm(uint8_t* time, uint8_t* bufferNU, uint8_t nbNU, uint8_t* bufferU, uint8_t nbU){ // This function is a bit overkill
+// but it separate findNextActiveAlarm from the alarm detection
   uint8_t i = 0;
   //si il y a plusieur alarme unique a une même heure, seulement la premiere sera desarme.
-  while(i < nbU){
+  while(i < nbU){ // Check for each alarm
     if(
       ((bufferU[i*2] & 0b01111111) == time[0]) &&
-      (bufferU[i*2+1] == (time[1] & 0b00111111))
+      (bufferU[i*2+1] == (time[1] & 0b00111111)) // Check time
     ){
       const uint8_t tmp[2] = {bufferU[i] & 0b011111111, bufferU[i+1]};
-      //AT24C32::modifyU(i, tmp);
-      return true;
+      //AT24C32::modifyU(i, tmp); // Deactivate U alarm after one use
+      return true; // No need to go further
     }
     i++;
   }
@@ -1254,25 +1251,25 @@ bool checkAlarm(uint8_t* time, uint8_t* bufferNU, uint8_t nbNU, uint8_t* bufferU
     if(
       ((bufferNU[i*3] & 0b01111111) == time[0]) &&
       (bufferNU[i*3+1] == (time[1] & 0b00111111)) &&
-      (bufferNU[i*3+2] & (0b1<< (time[2]-1)))
+      (bufferNU[i*3+2] & (0b1<< (time[2]-1))) // Check time and day of the week
     ){
       return true;
     }
     i++;
   }
-  return false;
+  return false; // No alarm matching detected
 }
 
 void displayAlarm(uint8_t index, const uint8_t * bufferNU, const uint8_t* bufferU, uint8_t* display){
   if(index & 0b10000000){
     index &= 0b00001111;
-    display[0] = bufferNU[index*3];
-    display[1] = bufferNU[index*3+1];
-    display[2] = bufferNU[index*3+2];
+    display[0] = bufferNU[(index - 1) * 3];
+    display[1] = bufferNU[(index - 1) * 3 + 1];
+    display[2] = bufferNU[(index - 1) * 3 + 2];
   }
   else{
-    display[0] = bufferU[index*2];
-    display[1] = bufferU[index*2+1];
+    display[0] = bufferU[(index - 1) * 2];
+    display[1] = bufferU[(index - 1) * 2 + 1];
     display[2] = 0x00;
   }
 }
@@ -1281,24 +1278,22 @@ uint8_t findNextActiveAlarm(uint8_t* time, uint8_t* bufferNU, uint8_t nbNU, uint
   //boucle Unique
   int16_t current = toMin(time[0], time[1]) + 1; //pour ne pas afficher celui de la minute en cour.
   uint8_t index = 0; // no alarm
-  int16_t minDiff = 10080;
-  if(nbU){
-    minDiff = computeDiff(current, toMin(bufferU[0], bufferU[1]));
-    
-    for(uint8_t i = 2; i < nbU; i = i + 2){
-      int16_t diff = computeDiff(current, toMin(bufferU[i], bufferU[i+1]));
+  int16_t minDiff = 10080; // minDiff set at 7day = 10080 min
+  if(nbU){ // At least 1 U alarm
+    for(uint8_t i = 0; i < nbU; i++){
+      int16_t diff = computeDiff(current, toMin(bufferU[i*2], bufferU[(i*2)+1]));
       if(diff < minDiff){
         minDiff = diff;
-        index = i / 2;
+        index = i + 1;
       }
     }
   }
-  if(nbNU){
-    for(uint8_t i = 0; i < nbNU; i = i + 3){
-      int16_t diff = computeDiffNU(current, toMin(bufferNU[i], bufferNU[i+1]), time[2], bufferNU[i+2]);
+  if(nbNU){ // At least 1 U alarm
+    for(uint8_t i = 0; i < nbNU; i++){
+      int16_t diff = computeDiffNU(current, toMin(bufferNU[i*3], bufferNU[(i*3)+1]), time[2], bufferNU[(i*3)+2]);
       if(diff < minDiff){
         minDiff = diff;
-        index = (i / 3) | 0b10000000;
+        index = (i + 1) | 0b10000000; // 0B1xxxxxxx to indicate its an NU
       }
     }
   }
@@ -1317,7 +1312,7 @@ int16_t toMin(uint8_t min, uint8_t hour){
 
 int16_t computeDiff(int16_t current, int16_t alarm){
   int16_t diff = alarm - current;
-  if(diff < 0){
+  if(diff < 0){ // If it is negative, then add one day (example -2h + 24h --> alarm in 22h) 
     diff += 1440;
   }
   return diff;
@@ -1326,34 +1321,30 @@ int16_t computeDiff(int16_t current, int16_t alarm){
 int16_t computeDiffNU(int16_t current, int16_t alarm, uint8_t currentDay, uint8_t alarmDays){
   bool nextday = false;
   int16_t diff = alarm - current;
-  if(diff < 0){
+  if(diff < 0){ // If it is negative, then add one day (example -2h + 24h --> alarm in 22h) 
     diff += 1440;
-    nextday = true;
+    nextday = true; // We need this to check with the days of the week
   }
 
   uint8_t b = alarmDays;
-  uint8_t lsb = b & -b;
-  uint8_t bit = __builtin_ctz(lsb);
-  int8_t shiftedBit = bit + 1 - currentDay - nextday;
-  if (shiftedBit < 0){
+  uint8_t bit = __builtin_ctz(b); // We take the first day the alarm is active
+  // shiftedBit represent the number of days before the next day where the alarm is active
+  int8_t shiftedBit = bit + 1 - currentDay - nextday; // We check is the first day is the first coming day where the alarm is active
+  if (shiftedBit < 0){ // If this is negative then add a week (example -2days + 7 --> alarm in 5 days)
     shiftedBit = shiftedBit + 7;
   }
-  if((bit + 1 - currentDay - nextday)<0){
-    b &= b - 1;
-    if(b){
+  if((bit + 1 - currentDay - nextday)<0){ // If >= 0 then we already found the earliest day where the alarm is active just before
+    b &= b - 1; // Else we remove the LSB (least significant bit)
+    if(b){ // If there are still some bits in b then there might be some days where it's closer to current time
       bool isfirstday = false;
-      while (b && !isfirstday) {
-        lsb = b & -b;
-        bit = __builtin_ctz(lsb);
+      while (b && !isfirstday) { // We run while there is data in b and we didn't detected the first day giving a positive (bit + 1 - currentDay - nextday)
+        bit = __builtin_ctz(b);
         int8_t newshiftedBit = bit + 1 - currentDay - nextday;
-        if (newshiftedBit < 0){
-          newshiftedBit = newshiftedBit + 7;
+        if ((bit + 1 - currentDay - nextday)>=0){ // If it's positive we found the first day where the alarm is less than 24h off
+          shiftedBit = newshiftedBit; // Saving the new best value
+          isfirstday = true;  // Quiting the loop
         }
-        if ((bit + 1 - currentDay - nextday)>=0){
-          shiftedBit = newshiftedBit;
-          isfirstday = true;
-        }
-        b &= b - 1;
+        b &= b - 1; // Remove the LSB
       }
     }
   }

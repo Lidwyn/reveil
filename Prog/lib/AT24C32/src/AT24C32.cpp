@@ -3,8 +3,8 @@
 uint8_t AT24C32::address = 0;
 bool AT24C32::boolhasbegun = false;
 const uint8_t AT24C32::RegBytes = 8;
-const uint8_t AT24C32::NUBytes = 0x08; //debut de la zone NU 0x08 = 8; fin en 0x34 = 52
-const uint8_t AT24C32::UBytes = 0x36; //debut de la zone U 0x63 = 54; fin en 0x53 = 83
+const uint8_t AT24C32::NUBytes = AT24C32::RegBytes; //debut de la zone NU 0x08 = 8; fin en 0x34 = 52
+const uint8_t AT24C32::UBytes = 0x36; //debut de la zone U 0x36 = 54; fin en 0x53 = 83
 Stream* AT24C32::_serial = nullptr;
 
 void AT24C32::begin(const uint8_t addr, const bool wireBegan, Stream* serial) {
@@ -277,26 +277,27 @@ void AT24C32::modifyNU(uint8_t nb, uint8_t* buffer){
     readReg[i++] = Wire.read();
   }
 
+  // Loop to find the position of the nb alarm in the reg, and then computing in to position in the EEPROM
   bool notfound = true;
-  i = 0;
-  uint8_t j = 0;
-  while(notfound && (i < nbRead)){
-    uint8_t b = (readReg[i] & 0b01010101)>>1;
-    while (b && notfound) {
-      uint8_t lsb = b & -b;
-      uint8_t bit = __builtin_ctz(lsb) / 2;
-      pos = i * 4 + bit;
-      b &= b - 1;
-      if(j == nb){
+  i = 0; // Reg line
+  uint8_t j = 0; // Posision, when j = nb, it's the right position
+  while(notfound && (i < nbRead)){ // Continue while we did not find the right position, or read everything
+    uint8_t b = (readReg[i] & 0b01010101); // We only keep the existing data to the reg, and removing the Active data
+    while (b && notfound) { // We check each bit at 1 in b and stop where we found the right position or read every bit at 1
+      uint8_t bit = __builtin_ctz(b) / 2; // getting the position of the LSB
+      pos = i * 4 + bit; // Compute the exact position in the reg, not only the line
+      b &= b - 1; // Removing the LSB
+      if(j == nb){ // Position found
         notfound = false;
+        // Changing the Active or not stat in the reg
         Wire.beginTransmission(address);
         Wire.write(0x00);
         Wire.write(i);
-        if(buffer[0] & 0b10000000){ // Changing reg depending on Active state
+        if(buffer[0] & 0b10000000){ // Active
           Wire.write(readReg[i] | 0b11<<(pos*2));
         }
-        else{
-          Wire.write(readReg[i] & ~(0b10<<(pos*2)));
+        else{ // Not active
+          Wire.write(readReg[i] & ~(0b10<<(pos*2))); // ~ = invverse, so it's shutting the left and turning on the right 1
         }
         Wire.endTransmission();
       }
@@ -305,9 +306,10 @@ void AT24C32::modifyNU(uint8_t nb, uint8_t* buffer){
     i++;
   }
 
+  delay(100); // This delay is very important, if it's not here, what comes after won't work
   Wire.beginTransmission(address);
   Wire.write(0x00);
-  Wire.write(RegBytes+pos*3);
+  Wire.write(NUBytes+pos*3);
   Wire.write(buffer[0]);
   Wire.write(buffer[1]);
   Wire.write(buffer[2]);
@@ -334,17 +336,16 @@ void AT24C32::modifyU(uint8_t nb, uint8_t* buffer){
   i = 0;
   uint8_t j = 0;
   while(notfound && (i < nbRead)){
-    uint8_t b = (readReg[i] & 0b01010101)>>1;
+    uint8_t b = (readReg[i] & 0b01010101);
     while (b && notfound) {
-      uint8_t lsb = b & -b;
-      uint8_t bit = __builtin_ctz(lsb) / 2;
+      uint8_t bit = __builtin_ctz(b) / 2;
       pos = i * 4 + bit;
       b &= b - 1;
       if(j == nb){
         notfound = false;
         Wire.beginTransmission(address);
         Wire.write(0x00);
-        Wire.write(i);
+        Wire.write(i + RegBytes /2);
         if(buffer[0] & 0b10000000){ // Changing reg depending on Active state
           Wire.write(readReg[i] | 0b11<<(pos*2));
         }
@@ -358,9 +359,10 @@ void AT24C32::modifyU(uint8_t nb, uint8_t* buffer){
     i++;
   }
 
+  delay(100); // This delay is very important, if it's not here, what comes after won't work
   Wire.beginTransmission(address);
   Wire.write(0x00);
-  Wire.write(UBytes + pos * 2);
+  Wire.write(UBytes + (pos * 2));
   Wire.write(buffer[0]);
   Wire.write(buffer[1]);
   Wire.endTransmission();
