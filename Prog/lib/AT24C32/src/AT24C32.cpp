@@ -115,8 +115,7 @@ uint8_t AT24C32::readActive(uint8_t* bufferNU, uint8_t* bufferU){
   for(i = 0; i < RegBytes/2; i++){
     uint8_t b = (readReg[i] & 0b10101010)>>1;
     while (b) {
-      uint8_t lsb = b & -b;
-      uint8_t bit = __builtin_ctz(lsb) / 2;
+      uint8_t bit = __builtin_ctz(b) / 2;
       pos[nbRead++] = i * 4 + bit;
       b &= b - 1;
     }
@@ -140,8 +139,7 @@ uint8_t AT24C32::readActive(uint8_t* bufferNU, uint8_t* bufferU){
   for(; i < RegBytes; i++){
     uint8_t b = (readReg[i] & 0b10101010)>>1;
     while (b) {
-      uint8_t lsb = b & -b;
-      uint8_t bit = __builtin_ctz(lsb) / 2;
+      uint8_t bit = __builtin_ctz(b) / 2;
       pos[nbRead++] = (i - 4) * 4 + bit;
       b &= b - 1;
     }
