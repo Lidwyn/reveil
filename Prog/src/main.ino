@@ -361,12 +361,21 @@ void loop() { //-------------------------------------------------loop
         }
 
         if(refreshNextAlarmDislpay){
-              myMAX7219_2.send(4, chiffres[(displayNextAlarm[1] & 0b00110000)>>4]);
-              myMAX7219_2.send(3, chiffres[displayNextAlarm[1] & 0b00001111]);
-              myMAX7219_2.send(2, chiffres[(displayNextAlarm[0] & 0b01110000)>>4]);
-              myMAX7219_2.send(1, chiffres[displayNextAlarm[0] & 0b00001111]);
-              myMAX7219_2.send(5, displayNextAlarm[2]);
-              refreshNextAlarmDislpay = false;
+          if(nbActive != 0){
+            myMAX7219_2.send(4, chiffres[(displayNextAlarm[1] & 0b00110000)>>4]);
+            myMAX7219_2.send(3, chiffres[displayNextAlarm[1] & 0b00001111]);
+            myMAX7219_2.send(2, chiffres[(displayNextAlarm[0] & 0b01110000)>>4]);
+            myMAX7219_2.send(1, chiffres[displayNextAlarm[0] & 0b00001111]);
+            myMAX7219_2.send(5, displayNextAlarm[2]);
+          }
+          else {
+            myMAX7219_2.send(4, 0);
+            myMAX7219_2.send(3, 0);
+            myMAX7219_2.send(2, 0);
+            myMAX7219_2.send(1, 0);
+            myMAX7219_2.send(5, 0);
+          }
+          refreshNextAlarmDislpay = false;
         }
       }
       else{
@@ -735,8 +744,12 @@ void loop() { //-------------------------------------------------loop
             RTCFlag = true; // on force un flag d'affichage normal
             nbAlarm = AT24C32::readAll(AlarmNU, AlarmU); // Refresh nbAlarm : number of stored alarm
             nbActive = AT24C32::readActive(ActiveNU, ActiveU); // Refresh nbActive : number of stored alarm which are active/enable
-            nextAlarmIndex = findNextActiveAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f); // Looking for next alarmIndex
-            displayAlarm(nextAlarmIndex, ActiveNU, ActiveU, displayNextAlarm); // Formating displayNextAlarm
+            Serial.print("nbActive = ");
+            Serial.println(nbActive, BIN);
+            if(nbActive != 0){
+              nextAlarmIndex = findNextActiveAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f); // Looking for next alarmIndex
+              displayAlarm(nextAlarmIndex, ActiveNU, ActiveU, displayNextAlarm); // Formating displayNextAlarm
+            }
             refreshNextAlarmDislpay = true; // Force NextAlarm display on the next mode 0 frame
             bool setupSwitchStillUp = digitalRead(btDroite); // On attend d'avoir relacher le bouton setup pour sortir, pour ne pas avoir une interruptions et revenir directement dans mode 1
             while(setupSwitchStillUp){
@@ -755,8 +768,8 @@ void loop() { //-------------------------------------------------loop
         if(!UDHysteresis){
           UDHysteresis = true;
           uint8_t maxSelectedAlarm = selectedType ? nbAlarm & 0b00001111 : nbAlarm >> 4;
-          if((selectedAlarm + setupDown < maxSelectedAlarm + 2) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir - + 2 due to esc- mode and new alarm
-            selectedAlarm = selectedAlarm - setupUp + setupDown;
+          if((selectedAlarm + setupDown <= maxSelectedAlarm + 2) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir - + 2 due to esc- mode and new alarm
+            selectedAlarm = selectedAlarm - setupUp + setupDown; // setupUP goes down in the list and setupDown goes up
           }
         }
         else if(UDHysteresis && !setupUp && !setupDown){
@@ -788,7 +801,11 @@ void loop() { //-------------------------------------------------loop
       }
       else{
         if(!selectedType){ // alarme de type non unique
-          if((selectedAlarm) <= ((nbAlarm & 0b11110000)>>4)){ // affichage classique, sinon propo nouvelle alarme
+          Serial.print("selectedAlarm : ");
+          Serial.print(selectedAlarm);
+          Serial.print(" | nbAlarm formated : ");
+          Serial.println((nbAlarm & 0xf0)>>4);
+          if((selectedAlarm) <= ((nbAlarm & 0xf0)>>4)){ // Normal display, else : new alarm proposal
             alarmIsNew = false;
             myMAX7219_1.send(4, chiffres[(AlarmNU[(selectedAlarm - 1) * 3 + 1] & 0b00110000)>>4]);
             myMAX7219_1.send(3, chiffres[AlarmNU[(selectedAlarm - 1) * 3 + 1] & 0b00001111]);
@@ -824,13 +841,13 @@ void loop() { //-------------------------------------------------loop
           }
         }
         else{ // alarme de type unique
-          if((selectedAlarm) <= (nbAlarm & 0b00001111)){ // affichage classique, sinon propo nouvelle alarme
+          if((selectedAlarm) <= (nbAlarm & 0x0f)){ // affichage classique, sinon propo nouvelle alarme
             alarmIsNew = false;
             myMAX7219_1.send(4, chiffres[(AlarmU[(selectedAlarm - 1) * 2 + 1] & 0b00110000)>>4]);
             myMAX7219_1.send(3, chiffres[AlarmU[(selectedAlarm - 1) * 2 + 1] & 0b00001111]);
             myMAX7219_1.send(2, chiffres[(AlarmU[(selectedAlarm - 1) * 2] & 0b01110000)>>4]);
             myMAX7219_1.send(1, chiffres[AlarmU[(selectedAlarm - 1) * 2] & 0b00001111]);
-            myMAX7219_1.send(5, 0);
+            myMAX7219_1.send(5, (AlarmU[(selectedAlarm - 1) * 3] & 0b10000000)>>1); // Alarm Activated indicator on ddot
             myMAX7219_2.send(5, 0);
             if(!confirmDelete){
               myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
@@ -1209,11 +1226,11 @@ uint8_t modifyIsSetting(const uint8_t selectedParam, const bool setupUp, uint8_t
   return computeValueInv(data);
 }
 
-uint8_t computeValue(const uint8_t value){
+uint8_t computeValue(const uint8_t value){ // Compute value 0b zzzz zzzz = 0b 0000 xxxx + 10 * (0b yyyy 0000 >> 4)
   return (value & 0b00001111) + (((value & 0b11110000)>>4)*10);
 }
 
-uint8_t computeValueInv(const uint8_t value){
+uint8_t computeValueInv(const uint8_t value){ // Compute value back to normal
   return (uint8_t(value / 10)<<4) | (uint8_t(value % 10));
 }
 
@@ -1263,7 +1280,7 @@ void displayAlarm(uint8_t index, const uint8_t * bufferNU, const uint8_t* buffer
 uint8_t findNextActiveAlarm(uint8_t* time, uint8_t* bufferNU, uint8_t nbNU, uint8_t* bufferU, uint8_t nbU){
   //boucle Unique
   int16_t current = toMin(time[0], time[1]) + 1; //pour ne pas afficher celui de la minute en cour.
-  uint8_t index = 0;
+  uint8_t index = 0; // no alarm
   int16_t minDiff = 10080;
   if(nbU){
     minDiff = computeDiff(current, toMin(bufferU[0], bufferU[1]));

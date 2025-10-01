@@ -42,36 +42,35 @@ uint8_t AT24C32::readAll(uint8_t* bufferNU, uint8_t* bufferU){
   uint8_t pos[15];
   nbRead = 0;
 
-  for(i = 0; i < RegBytes/2; i++){
-    uint8_t b = (readReg[i] & 0b01010101)>>1;
-    while (b) {
-      uint8_t lsb = b & -b;
-      uint8_t bit = __builtin_ctz(lsb) / 2;
-      pos[nbRead++] = i * 4 + bit;
-      b &= b - 1;
+  for(i = 0; i < RegBytes/2; i++){ // For each line in the first half of the register (NU alarms)
+    uint8_t b = (readReg[i] & 0b01010101); // b takes the value the i line, only the part that concerns if it exist
+    while (b) { // While there is still some 1s in b
+      uint8_t bit = __builtin_ctz(b) / 2; // We look for the number of 0 behind the first bit at 1, and divide by 2 to know the pos in this register line
+      pos[nbRead++] = i * 4 + bit; // pos[] take the positions of all the alarm in the register
+      b &= b - 1; // Remove the last 1 in b and start over until b is empty
     }
   }
 
   for(uint8_t j = 0; j < nbRead; j++){
     Wire.beginTransmission(address);
-    Wire.write(0x00); //adresse haute
-    Wire.write(RegBytes+pos[j]*3); //adresse basse
+    Wire.write(0x00); // Upper address
+    Wire.write(RegBytes+pos[j]*3); // Lower address : the exact position of the alarm data = Regbytes + pos(number computed before) * 3 (NUalarm data take 3 lines)
     Wire.endTransmission();
-    Wire.requestFrom(address, (uint8_t)3);
+    Wire.requestFrom(address, (uint8_t)3); // Looking for 3 lines of data : 1 alarm data
     uint8_t k = 0;
     while (Wire.available() && k < 3) {
-      bufferNU[(3*j)+k] = Wire.read();
+      bufferNU[(3*j)+k] = Wire.read(); // We inject the read data to bufferNU
       k++;
     }
   }
-  ret = nbRead<<4;
+  ret = nbRead<<4; // Number of NU is saved in the first 4 bits of ret (later nbAlarm)
   
+  // We do the same for U alarms, alarm data is saved on only 2 lanes this time
   nbRead = 0;
   for(; i < RegBytes; i++){
-    uint8_t b = (readReg[i] & 0b01010101)>>1;
+    uint8_t b = (readReg[i] & 0b01010101);
     while (b) {
-      uint8_t lsb = b & -b;
-      uint8_t bit = __builtin_ctz(lsb) / 2;
+      uint8_t bit = __builtin_ctz(b) / 2;
       pos[nbRead++] = (i - 4) * 4 + bit;
       b &= b - 1;
     }
