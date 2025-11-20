@@ -13,19 +13,22 @@
 
 uint8_t MAX7219::_din = 0;
 uint8_t MAX7219::_clk = 0;
+Stream* MAX7219::_serial = nullptr;
 
 MAX7219::MAX7219(uint8_t cs) : _cs(cs) {                // constructeur avec un cs unique a chaque instance
   pinMode(_cs, OUTPUT);
   digitalWrite(_cs, HIGH);
 }
 
-void MAX7219::begin(uint8_t din, uint8_t clk) {         // configure DIN/CLK partagés
+void MAX7219::begin(uint8_t din, uint8_t clk, Stream* serial) {         // configure DIN/CLK partagés
   MAX7219::_din = din;
   MAX7219::_clk = clk;
   pinMode(_din, OUTPUT);
   pinMode(_clk, OUTPUT);
   digitalWrite(_clk, LOW);
   digitalWrite(_din, LOW);
+  _serial = serial;
+  _serial->println("librairie MAX7219");
 }
 
 void MAX7219::spi_write(uint8_t data) {                 // gestion de l'écriture bit par bit dans le SPI

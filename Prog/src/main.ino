@@ -113,13 +113,13 @@ bool btDroiteLastState = false; // Enregistre la derniere valeur du bouton pour 
 void setup() { //-------------------------------------------------setup
   double setupTimer = millis(); // calcul du temps de setup
   Serial.begin(9600); // port série debug à 9600 bauds
-  for(uint8_t i = 0; i < 50; i++){ 
+  for(uint8_t i = 0; i < 20; i++){ 
     Serial.println(); //serial clear
   }
   Serial.println("Hello depuis l'ATmega328P !");
 
   //Display init
-  MAX7219::begin(11, 13);
+  MAX7219::begin(11, 13, &Serial);
   myMAX7219_1.init();
   myMAX7219_2.init();
 
@@ -229,6 +229,7 @@ void setup() { //-------------------------------------------------setup
 
     
     //read all eeprom for debug
+    /*
     Serial.println("--- Read AT24C32 ---");
     uint8_t j = 0;
     while(j < 84){
@@ -243,7 +244,7 @@ void setup() { //-------------------------------------------------setup
       delay(50);
       j++;
     }
-    
+    */
     
 
     /*
@@ -1285,11 +1286,11 @@ uint8_t findNextActiveAlarm(uint8_t* time, uint8_t* bufferNU, uint8_t nbNU, uint
       int16_t diff = computeDiff(current, toMin(bufferU[i*2], bufferU[(i*2)+1]));
       if(diff < minDiff){
         minDiff = diff;
-        index = i + 1;
+        index = i + 1; // least is 1 (first alarm)
       }
     }
   }
-  if(nbNU){ // At least 1 U alarm
+  if(nbNU){ // At least 1 NU alarm
     for(uint8_t i = 0; i < nbNU; i++){
       int16_t diff = computeDiffNU(current, toMin(bufferNU[i*3], bufferNU[(i*3)+1]), time[2], bufferNU[(i*3)+2]);
       if(diff < minDiff){
@@ -1320,34 +1321,20 @@ int16_t computeDiff(int16_t current, int16_t alarm){
 }
 
 int16_t computeDiffNU(int16_t current, int16_t alarm, uint8_t currentDay, uint8_t alarmDays){
-  bool nextday = false;
-  int16_t diff = alarm - current;
-  if(diff < 0){ // If it is negative, then add one day (example -2h + 24h --> alarm in 22h) 
-    diff += 1440;
-    nextday = true; // We need this to check with the days of the week
-  }
-
-  uint8_t b = alarmDays;
-  uint8_t bit = __builtin_ctz(b); // We take the first day the alarm is active
-  // shiftedBit represent the number of days before the next day where the alarm is active
-  int8_t shiftedBit = bit + 1 - currentDay - nextday; // We check is the first day is the first coming day where the alarm is active
-  if (shiftedBit < 0){ // If this is negative then add a week (example -2days + 7 --> alarm in 5 days)
-    shiftedBit = shiftedBit + 7;
-  }
-  if((bit + 1 - currentDay - nextday)<0){ // If >= 0 then we already found the earliest day where the alarm is active just before
-    b &= b - 1; // Else we remove the LSB (least significant bit)
-    if(b){ // If there are still some bits in b then there might be some days where it's closer to current time
-      bool isfirstday = false;
-      while (b && !isfirstday) { // We run while there is data in b and we didn't detected the first day giving a positive (bit + 1 - currentDay - nextday)
-        bit = __builtin_ctz(b);
-        int8_t newshiftedBit = bit + 1 - currentDay - nextday;
-        if ((bit + 1 - currentDay - nextday)>=0){ // If it's positive we found the first day where the alarm is less than 24h off
-          shiftedBit = newshiftedBit; // Saving the new best value
-          isfirstday = true;  // Quiting the loop
-        }
-        b &= b - 1; // Remove the LSB
+  int16_t currentTotal = current + (currentDay - 1) * 1440; // Total time from the start of the week
+  int16_t minDiff = 10080; // Max time
+  int16_t diff = 10080; // Not important
+  while(alarmDays){ // While we still have days from the alarm to check
+    diff = alarm + (__builtin_ctz(alarmDays) * 1440) - currentTotal < 0 ? // We check if the total time from the start of the week of the alarm is more or less than current
+      alarm + __builtin_ctz(alarmDays) * 1440 - currentTotal + 10080 : // If less we add a week (example - 22h become 6 days and 2 h)
+      alarm + __builtin_ctz(alarmDays) * 1440 - currentTotal; // Else we keep the positive value
+    if (diff < minDiff){ 
+      minDiff = diff; // We keep the lowest diff
+      if (minDiff < 1440){ // No need to go further, we already found the lowest possible
+        return minDiff;
       }
     }
+    alarmDays &= alarmDays - 1; // Remove the LSB
   }
-  return shiftedBit * 1440 + diff;
+  return minDiff;
 }

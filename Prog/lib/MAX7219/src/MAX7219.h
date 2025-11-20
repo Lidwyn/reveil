@@ -7,7 +7,7 @@ class MAX7219 {
   public:
     //fonction de base
     MAX7219(uint8_t cs);                          // constructeur avec un cs unique a chaque instance
-    static void begin(uint8_t din, uint8_t clk);  // configure DIN/CLK partagés
+    static void begin(uint8_t din, uint8_t clk, Stream* serial);  // configure DIN/CLK partagés
 
     //fonction
     void send(uint8_t address, uint8_t data);         // fonction d'écriture : address = DIGx et data = SEG0-7
@@ -20,6 +20,7 @@ class MAX7219 {
     //statique
     static uint8_t _din;                          // din global pour la liaison SPI
     static uint8_t _clk;                          // clk global pour la liaison SPI
+    static Stream* _serial;
 
     //fonction
     void spi_write(uint8_t data);                      // gestion de l'écriture bit par bit dans le SPI
