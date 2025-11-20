@@ -708,6 +708,7 @@ void loop() { //-------------------------------------------------loop
         if(!btGaucheLastState){
           btGaucheLastState = true;
           selectedType = !selectedType;
+          selectedAlarm = 1;
         }
         else if(btGaucheLastState && !setupLeft){
           btGaucheLastState = false;
@@ -768,7 +769,7 @@ void loop() { //-------------------------------------------------loop
         if(!UDHysteresis){
           UDHysteresis = true;
           uint8_t maxSelectedAlarm = selectedType ? nbAlarm & 0b00001111 : nbAlarm >> 4;
-          if((selectedAlarm + setupDown <= maxSelectedAlarm + 2) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir - + 2 due to esc- mode and new alarm
+          if((selectedAlarm + setupDown <= maxSelectedAlarm + 1) && (selectedAlarm - setupUp >= 0)){ // on test pour ne pas sortir; + 1 due to esc- mode and new alarm
             selectedAlarm = selectedAlarm - setupUp + setupDown; // setupUP goes down in the list and setupDown goes up
           }
         }
