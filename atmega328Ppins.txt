@@ -2,7 +2,7 @@
   RESET  1 |PC6   PC5| 28 SCL
      RX  2 |PD0   PC4| 27 SDA
      TX  3 |PD1   PC3| 26 DS3231 CLK
-Bouton+  4 |PD2   PC2| 25
+Bouton+  4 |PD2   PC2| 25 DFPlayer power
 Bouton-  5 |PD3   PC1| 24 RX Audio
 BoutonS  6 |PD4   PC0| 23 TX Audio
     VCC  7 |         | 22 GND
