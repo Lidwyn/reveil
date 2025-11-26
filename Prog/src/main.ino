@@ -14,6 +14,8 @@
 #include "DS3231.h"           // DS3231
 #include "AT24C32.h"          // AT24C32
 #include "MAX7219.h"          // MAX7219
+#include <SoftwareSerial.h>   // Necessary for DFPlayer
+#include "DFPlayer.h"         // DFPlayer
 
 //partie interruption
 volatile bool RTCFlag = false;
@@ -43,7 +45,7 @@ bool setupIsInit = false;
 uint8_t newTimeData[7]; // traitement en amont des valeurs à envoyer dans le DS3231
 uint8_t isSetting;
 uint8_t selected = 1; // 0: heure, 1: minutes, 2: secondes, 3: jour(date), 4: mois, 5: année 
-unsigned long lastBlink = 0; // variable de test pour le clignotement du setup
+unsigned long lastBlink = 0; // variable de test pour le clignotement
 bool setupIsBlinking = 0; // 0: éteint, 1: allumé
 const unsigned long blinkTime = 500; // clignotement de 500ms (f = 1Hz)
 unsigned long BtLastReg = 0; // Variable de dernière itération de l'utilisation du bouton (haut ou bas)
@@ -110,21 +112,41 @@ bool btGaucheLastState = false; // Enregistre la derniere valeur du bouton pour 
 uint8_t btDroite = 7;       // bouton droite sur D7 / PIN 13 / PCINT23
 bool btDroiteLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
 
+//Audio
+const uint8_t DFPtx = A0;
+const uint8_t DFPrx = A1;
+const uint8_t DFPpower = A2;
+SoftwareSerial DFPlayerPort(/*rx =*/DFPrx, /*tx =*/DFPtx);
+bool isAwake = false;
+bool isReset = false;
+unsigned long alarmWakeUpTimer = 0; // This timer is for the delay between the DFPlayer turning on and the first UART transmission
+const unsigned long wakeUpTime = 900; // From testing, 900 ms was the smallest amount of time necessary
+// réutilisation de lastBlink, setupIsBlinking et blinkTime
+
 void setup() { //-------------------------------------------------setup
-  double setupTimer = millis(); // calcul du temps de setup
-  Serial.begin(9600); // port série debug à 9600 bauds
+  
+  //Audio
+  pinMode(DFPrx, OUTPUT);
+  pinMode(DFPtx, OUTPUT);
+  pinMode(DFPpower, OUTPUT);
+  digitalWrite(DFPpower, LOW);  // Turning the DFPlayer on for setup (low = on --> mosfet P-channel)
+  // 1 sec delay necessary after this, so the rest of the setup is found at the end 
+  //Sleep_mode init
+
+  double setupTimer = millis(); // Setup duration and for DFPlayer setup timer
+  Serial.begin(9600); // Debug serial port at 9600 bauds
   for(uint8_t i = 0; i < 20; i++){ 
     Serial.println(); //serial clear
   }
-  Serial.println("Hello depuis l'ATmega328P !");
+  Serial.println("Hello from ATmega328P !");
 
   //Display init
   MAX7219::begin(11, 13, &Serial);
   myMAX7219_1.init();
   myMAX7219_2.init();
 
-  //Allumage du display pendant le setup
-  myMAX7219_1.send(1, 0xff);
+  //Turning the display on while setup
+  myMAX7219_1.send(1, 0xff);  // Turning on all the led for every 7-seg
   myMAX7219_1.send(2, 0xff);
   myMAX7219_1.send(3, 0xff);
   myMAX7219_1.send(4, 0xff);
@@ -137,7 +159,7 @@ void setup() { //-------------------------------------------------setup
   myMAX7219_2.send(5, 0xff);
 
   //I2C init
-  Wire.begin(); // setup de wire.h pour le bus I2C
+  Wire.begin(); // wire.h setup for I2C bus
   DS3231::begin(DS3231addr, true, &Serial);
   AT24C32::begin(AT24C32addr, true, &Serial);
 
@@ -163,7 +185,6 @@ void setup() { //-------------------------------------------------setup
   
   sei();  // Active les interruption globale
 
-  //Sleep_mode init
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   if(true){ // bus I2C debug
     //write eeprom
@@ -285,14 +306,19 @@ void setup() { //-------------------------------------------------setup
   nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
   nbActive = AT24C32::readActive(ActiveNU, ActiveU);
 
-  //next alarm setup
+  //Next alarm setup
   nextAlarmIndex = findNextActiveAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f);
   displayAlarm(nextAlarmIndex, ActiveNU, ActiveU, displayNextAlarm);
   
-  //eteindre les 7seg
-  while((millis() - setupTimer) < secondInterval){ //setup dure min 1 seconde
+  //Audio rest of setup  
+  while((millis() - setupTimer) < secondInterval){ //we check if we waited 1 sec after turning on the DFPlayer dure min 1 seconde
     delay(50);
   }
+  DFPlayerPort.begin(9600);
+  DFPLAYER::begin(&DFPlayerPort, DFPrx, DFPtx, DFPpower, &Serial);
+  delay(50);
+  DFPLAYER::toSleep();
+  //Turning of the display
   myMAX7219_1.send(1, 0);
   myMAX7219_1.send(2, 0);
   myMAX7219_1.send(3, 0);
@@ -305,7 +331,7 @@ void setup() { //-------------------------------------------------setup
   myMAX7219_2.send(4, 0);
   myMAX7219_2.send(5, 0);
 
-  //premier affichage
+  //First display
   myMAX7219_1.send(4, chiffres[(displayTime[1] & 0b00110000)>>4]);
   myMAX7219_1.send(3, chiffres[displayTime[1] & 0b00001111]);
   myMAX7219_1.send(2, chiffres[(displayTime[0] & 0b01110000)>>4]);
@@ -500,7 +526,6 @@ void loop() { //-------------------------------------------------loop
     if(now - lastBlink > blinkTime){
       lastBlink = now;
       setupIsBlinking = !setupIsBlinking;
-      // partie debug serial
     }
     switch(selected){
       case 0:{ // secondes
@@ -1087,6 +1112,51 @@ void loop() { //-------------------------------------------------loop
         }
       }
     }
+    delay(10);
+  }
+  else if(mode == 3){ //-----------------------------------------Alarm mode (audio)
+    unsigned long now = millis();
+    if(!isReset){
+      if(!isAwake){
+        DFPLAYER::wakeUp();
+        isAwake = true;
+      }
+
+      if((now - alarmWakeUpTimer) > wakeUpTime){ // Cannot send an UART msg just after awaking the DFPlayer, need to wait
+        DFPLAYER::wakeUpReset(); // Reset is for volume mainly
+        DFPLAYER::play(); // Start playing the alarm
+        isReset = true;
+      }
+    }
+
+    const stopButton = digitalRead(btA);
+    
+    if(stopButton){ // End of alarm/mode 4
+      DFPLAYER::pause(); // Stop the audio
+      DFPLAYER::toSleep(); // Turn the DFPlayer off
+
+      isAwake = false; // Reset the alarm mode variables
+      isReset = false;
+      bool setupSwitchStillUp = digitalRead(btA); // Waiting for the button to be realised and not having an interruption directly after in mode 0
+      while(setupSwitchStillUp){
+        delay(10);
+        setupSwitchStillUp = digitalRead(btA);
+      }
+      return; // Force restart to the loop()
+    }
+
+    if(now - lastBlink > blinkTime){ // Checking if blinking
+      lastBlink = now;
+      setupIsBlinking = !setupIsBlinking;
+    }
+
+    DS3231::readDisplayTime(displayTime);
+    // Whole display is blinking, if setupIsBlinking is 0, the it sends 0 to every display = off
+    myMAX7219_1.send(4,setupIsBlinking * chiffres[(displayTime[1] & 0b00110000)>>4]);
+    myMAX7219_1.send(3,setupIsBlinking * chiffres[displayTime[1] & 0b00001111]);
+    myMAX7219_1.send(2,setupIsBlinking * chiffres[(displayTime[0] & 0b01110000)>>4]);
+    myMAX7219_1.send(1,setupIsBlinking * chiffres[displayTime[0] & 0b00001111]);
+    myMAX7219_1.send(5, setupIsBlinking<<6);
     delay(10);
   }
 } //-------------------------------------------------------------end loop

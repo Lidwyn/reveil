@@ -1,0 +1,10 @@
+{
+  "name": "DFPlayer",
+  "version": "1.0.0",
+  "description": "Library that handle the serial port usage and the power for sleep mode of audio device",
+  "authors": [
+    {
+      "name": "Lidwyn"
+    }
+  ]
+}
