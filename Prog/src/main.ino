@@ -14,7 +14,7 @@
 #include "DS3231.h"           // DS3231
 #include "AT24C32.h"          // AT24C32
 #include "MAX7219.h"          // MAX7219
-#include <SoftwareSerial.h>   // Necessary for DFPlayer
+#include <AltSoftSerial.h>      // Necessary for DFPlayer
 #include "DFPlayer.h"         // DFPlayer
 
 //partie interruption
@@ -38,7 +38,7 @@ uint8_t nextAlarmIndex;
 bool AlarmIsActive = false;
 
 //variable de mode reveil
-volatile uint8_t mode = 0; // 0: normal, 1: setup, 2: menu reveil
+volatile uint8_t mode = 0; // 0: normal, 1: setup, 2: menu alarm, 3: alarm audio
 
 //variable de setup
 bool setupIsInit = false;
@@ -80,8 +80,8 @@ uint8_t displayNextAlarm[3];
 volatile bool nightMode = false;
 
 //creation des éléments MAX7219 et de leur pin cs associé (SPI)
-MAX7219 myMAX7219_1(10);
-MAX7219 myMAX7219_2(9);
+MAX7219 myMAX7219_1(11);
+MAX7219 myMAX7219_2(10);
 bool ddot = true; //variable d'affichage des deux points
 volatile uint8_t brightness = 0x03; // Variable de luminosité des afficheurs (entre 0x00 et 0x0F)
 volatile bool brightnessFlag = false;
@@ -113,10 +113,10 @@ uint8_t btDroite = 7;       // bouton droite sur D7 / PIN 13 / PCINT23
 bool btDroiteLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
 
 //Audio
-const uint8_t DFPtx = A0;
-const uint8_t DFPrx = A1;
-const uint8_t DFPpower = A2;
-SoftwareSerial DFPlayerPort(/*rx =*/DFPrx, /*tx =*/DFPtx);
+const uint8_t DFPrx = 8;
+const uint8_t DFPtx = 9;
+const uint8_t DFPpower = A0;
+AltSoftSerial DFPlayerPort; // RX = D8/PB0 TX = D9/PB1 (forced)
 bool isAwake = false;
 bool isReset = false;
 unsigned long alarmWakeUpTimer = 0; // This timer is for the delay between the DFPlayer turning on and the first UART transmission
@@ -141,7 +141,7 @@ void setup() { //-------------------------------------------------setup
   Serial.println("Hello from ATmega328P !");
 
   //Display init
-  MAX7219::begin(11, 13, &Serial);
+  MAX7219::begin(12, 13, &Serial);
   myMAX7219_1.init();
   myMAX7219_2.init();
 
@@ -330,6 +330,7 @@ void setup() { //-------------------------------------------------setup
   myMAX7219_2.send(3, 0);
   myMAX7219_2.send(4, 0);
   myMAX7219_2.send(5, 0);
+  delay(500); // Black display for .5s to signal en of setup
 
   //First display
   myMAX7219_1.send(4, chiffres[(displayTime[1] & 0b00110000)>>4]);
@@ -342,6 +343,7 @@ void setup() { //-------------------------------------------------setup
   myMAX7219_2.send(2, chiffres[(displayNextAlarm[0] & 0b01110000)>>4]);
   myMAX7219_2.send(1, chiffres[displayNextAlarm[0] & 0b00001111]);
   myMAX7219_2.send(5, displayNextAlarm[2]);
+  Serial.println("setup end");
   /*Serial.println("fin setup/debut nonboucle debug");
   Serial.print("setup realise en : ");
   Serial.println((millis() - setupTimer)/1000);*/
@@ -375,14 +377,10 @@ void loop() { //-------------------------------------------------loop
           if(nbActive != 0){
             AlarmIsActive = checkAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f);
             if(AlarmIsActive){
-              /*Serial.println("!----------------------!");
+              Serial.println("!----------------------!");
               Serial.println("    Alarme detectee");
-              Serial.println("!----------------------!");*/
-              AlarmIsActive = false;  // arrêt avec le bouton theoriquement --> enfait je vais ajouter une variable isRinging
-              // Maj de la variable display next alarm
-              nextAlarmIndex = findNextActiveAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f);
-              displayAlarm(nextAlarmIndex, ActiveNU, ActiveU, displayNextAlarm);
-              refreshNextAlarmDislpay = true;  // Refresh de l'affichage du next alarm
+              Serial.println("!----------------------!");
+              mode = 3; // Going in mode 3 : ringing mode
             }
           }
         }
@@ -1118,45 +1116,87 @@ void loop() { //-------------------------------------------------loop
     unsigned long now = millis();
     if(!isReset){
       if(!isAwake){
+        PCICR = 0; // Deactivate interruptions
+        myMAX7219_1.send(4,0);
+        myMAX7219_1.send(3,0);
+        myMAX7219_1.send(2,0);
+        myMAX7219_1.send(1,0);
+        myMAX7219_1.send(5, 0);
+
+        myMAX7219_2.send(4, 0);
+        myMAX7219_2.send(3, 0);
+        myMAX7219_2.send(2, 0);
+        myMAX7219_2.send(1, 0);
+        myMAX7219_2.send(5, 0);
         DFPLAYER::wakeUp();
+        Serial.println("DFPlayer wake up");
+        alarmWakeUpTimer = now;
         isAwake = true;
       }
 
       if((now - alarmWakeUpTimer) > wakeUpTime){ // Cannot send an UART msg just after awaking the DFPlayer, need to wait
         DFPLAYER::wakeUpReset(); // Reset is for volume mainly
+        Serial.println("DFPlayer reset");
+        delay(15); // Necessary or the first msg will not be send
         DFPLAYER::play(); // Start playing the alarm
+        Serial.println("DFPlayer playing");
         isReset = true;
+        setupIsBlinking = false; // Start blinking
       }
     }
+    else{
 
-    const stopButton = digitalRead(btA);
-    
-    if(stopButton){ // End of alarm/mode 4
-      DFPLAYER::pause(); // Stop the audio
-      DFPLAYER::toSleep(); // Turn the DFPlayer off
+      const bool stopButton = digitalRead(btA);
+      
+      if(stopButton){ // End of alarm/mode 3
+        Serial.println("Stopping");
+        DFPLAYER::pause(); // Stop the audio
+        Serial.println("DFPlayer pause");
+        delay(15);
+        DFPLAYER::toSleep(); // Turn the DFPlayer off
+        Serial.println("DFPlayer to sleep");
 
-      isAwake = false; // Reset the alarm mode variables
-      isReset = false;
-      bool setupSwitchStillUp = digitalRead(btA); // Waiting for the button to be realised and not having an interruption directly after in mode 0
-      while(setupSwitchStillUp){
-        delay(10);
-        setupSwitchStillUp = digitalRead(btA);
+        isAwake = false; // Reset the alarm mode variables
+        isReset = false;
+        
+        AlarmIsActive = false; // alarm isn't active anymore // may be unnecessary
+        mode = 0;
+
+        // Check new next alarm
+        DS3231::readFullDate(timeData);
+        nextAlarmIndex = findNextActiveAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f);
+        displayAlarm(nextAlarmIndex, ActiveNU, ActiveU, displayNextAlarm); // Compute displayable alarm data
+        refreshNextAlarmDislpay = true;  // Refresh next alarm display in the next display loop
+
+        bool setupSwitchStillUp = digitalRead(btA); // Waiting for the button to be realised and not having an interruption directly after in mode 0
+        while(setupSwitchStillUp){
+          delay(10);
+          setupSwitchStillUp = digitalRead(btA);
+        }
+        PCICR = (1 << PCIE1) | (1 << PCIE2); // Reactivate interruptions
+        return; // Force restart to the loop()
       }
-      return; // Force restart to the loop()
-    }
 
-    if(now - lastBlink > blinkTime){ // Checking if blinking
-      lastBlink = now;
-      setupIsBlinking = !setupIsBlinking;
-    }
+      if(now - lastBlink > blinkTime){ // Checking if blinking
+        lastBlink = now;
+        setupIsBlinking = !setupIsBlinking;
+        Serial.println("blink");
+      }
 
-    DS3231::readDisplayTime(displayTime);
-    // Whole display is blinking, if setupIsBlinking is 0, the it sends 0 to every display = off
-    myMAX7219_1.send(4,setupIsBlinking * chiffres[(displayTime[1] & 0b00110000)>>4]);
-    myMAX7219_1.send(3,setupIsBlinking * chiffres[displayTime[1] & 0b00001111]);
-    myMAX7219_1.send(2,setupIsBlinking * chiffres[(displayTime[0] & 0b01110000)>>4]);
-    myMAX7219_1.send(1,setupIsBlinking * chiffres[displayTime[0] & 0b00001111]);
-    myMAX7219_1.send(5, setupIsBlinking<<6);
+      DS3231::readDisplayTime(displayTime);
+      // Whole display is blinking, if setupIsBlinking is 0, the it sends 0 to every display = off
+      myMAX7219_1.send(4,setupIsBlinking * chiffres[(displayTime[1] & 0b00110000)>>4]);
+      myMAX7219_1.send(3,setupIsBlinking * chiffres[displayTime[1] & 0b00001111]);
+      myMAX7219_1.send(2,setupIsBlinking * chiffres[(displayTime[0] & 0b01110000)>>4]);
+      myMAX7219_1.send(1,setupIsBlinking * chiffres[displayTime[0] & 0b00001111]);
+      myMAX7219_1.send(5, setupIsBlinking<<6);
+
+      myMAX7219_2.send(4, setupIsBlinking * chiffres[(displayNextAlarm[1] & 0b00110000)>>4]);
+      myMAX7219_2.send(3, setupIsBlinking * chiffres[displayNextAlarm[1] & 0b00001111]);
+      myMAX7219_2.send(2, setupIsBlinking * chiffres[(displayNextAlarm[0] & 0b01110000)>>4]);
+      myMAX7219_2.send(1, setupIsBlinking * chiffres[displayNextAlarm[0] & 0b00001111]);
+      myMAX7219_2.send(5, setupIsBlinking * displayNextAlarm[2]);
+    }
     delay(10);
   }
 } //-------------------------------------------------------------end loop

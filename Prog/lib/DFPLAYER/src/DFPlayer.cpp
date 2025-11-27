@@ -1,13 +1,13 @@
 #include "DFPlayer.h"
 
 Stream* DFPLAYER::_serial = nullptr;    // Serial port for debug
-SoftwareSerial* DFPLAYER::_DFPport = nullptr;   // Serial port for the DFPlayer
+Stream* DFPLAYER::_DFPport = nullptr;   // Serial port for the DFPlayer
 uint8_t _rx;   // for sleep mode
 uint8_t _tx;   // for sleep mode
 uint8_t _powerPin; // for sleep mode
-uint8_t _volume = 10; // base volume
+uint8_t _volume = 15; // base volume
 
-void DFPLAYER::begin(SoftwareSerial* DFPport, uint8_t rx, uint8_t tx, uint8_t powerPin, Stream* serial) {
+void DFPLAYER::begin(Stream* DFPport, uint8_t rx, uint8_t tx, uint8_t powerPin, Stream* serial) {
   _serial = serial;
   _serial->println("librairie DFPlayer");   // Checking the librairy is started
   _DFPport = DFPport;
@@ -18,9 +18,8 @@ void DFPLAYER::begin(SoftwareSerial* DFPport, uint8_t rx, uint8_t tx, uint8_t po
   pinMode(_rx, OUTPUT);
   pinMode(_tx, OUTPUT);
   sendDFPCommand(0x3F);   // Initialise DFPlayer
-  delay(10);
+  delay(15);
   volume(_volume);
-  delay(10);
 }
 
 void DFPLAYER::sendDFPCommand(uint8_t cmd, uint8_t param = 0x00){ // If unspecified, then it's un-needed = 0
@@ -68,7 +67,7 @@ void DFPLAYER::pause(){ // Pause the track
 
 void DFPLAYER::toSleep(){ // Going to low power mode
   digitalWrite(_powerPin, HIGH);
-  _DFPport->stopListening();
+  //_DFPport->stopListening(); // Doesn't work anymore with NeoSWSerial
   digitalWrite(_rx, LOW);
   digitalWrite(_tx, LOW);
 }
@@ -77,8 +76,8 @@ void DFPLAYER::wakeUp(){ // Going to normal mode
   digitalWrite(_powerPin, LOW);
   digitalWrite(_rx, HIGH);
   digitalWrite(_tx, HIGH);
-  _DFPport->listen();
-  _serial->println("must call DFPLAYER::wakeUpReset() in 1-2 seconds");
+  //_DFPport->listen(); // Doesn't work anymore with NeoSWSerial
+  //_serial->println("must call DFPLAYER::wakeUpReset() in 0.9 seconds");
 }
 
 void DFPLAYER::wakeUpReset(){ // Must call this function 1-2 second after wake up

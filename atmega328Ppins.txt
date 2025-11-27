@@ -1,16 +1,16 @@
-           +----_----+
-  RESET  1 |PC6   PC5| 28 SCL
-     RX  2 |PD0   PC4| 27 SDA
-     TX  3 |PD1   PC3| 26 DS3231 CLK
-Bouton+  4 |PD2   PC2| 25 DFPlayer power
-Bouton-  5 |PD3   PC1| 24 RX Audio
-BoutonS  6 |PD4   PC0| 23 TX Audio
-    VCC  7 |         | 22 GND
-    GND  8 |         | 21 AREF
-         9 |PB6      | 20 AVCC
-        10 |PB7   PB5| 19 SCK
-BoutonA 11 |PD5   PB4| 18
-Bouton< 12 |PD6   PB3| 17 MOSI
-Bouton> 13 |PD7   PB2| 16 CS-1
-        14 |PB0   PB1| 15 CS-2
-           +---------+
+            +----_----+
+  RESET   1 |PC6   PC5| 28 SCL
+     RX   2 |PD0   PC4| 27 SDA
+     TX   3 |PD1   PC3| 26 DS3231 CLK
+Bouton+   4 |PD2   PC2| 25 
+Bouton-   5 |PD3   PC1| 24 
+BoutonS   6 |PD4   PC0| 23 DFPlayer power
+    VCC   7 |         | 22 GND
+    GND   8 |         | 21 AREF
+          9 |PB6      | 20 AVCC
+         10 |PB7   PB5| 19 SCK
+BoutonA  11 |PD5   PB4| 18 MOSI
+Bouton<  12 |PD6   PB3| 17 CS-1
+Bouton>  13 |PD7   PB2| 16 CS-2
+RX Audio 14 |PB0   PB1| 15 TX Audio
+            +---------+

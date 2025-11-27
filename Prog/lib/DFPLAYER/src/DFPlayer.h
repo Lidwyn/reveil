@@ -2,12 +2,12 @@
 #define DFPLAYER_H
 
 #include <Arduino.h> // Always include this!
-#include <SoftwareSerial.h>
+//#include <NeoSWSerial.h>
 
 class DFPLAYER {
   public:
     // Basic functions
-    static void begin(SoftwareSerial* DFPport, uint8_t rx, uint8_t tx, uint8_t powerPin, Stream* serial); // Configure and initialise de DFPlayer
+    static void begin(Stream* DFPport, uint8_t rx, uint8_t tx, uint8_t powerPin, Stream* serial); // Configure and initialise de DFPlayer
     static void play(); // Play the track
     static void volume(uint8_t vol); // Volume
     static void pause(); // Pause the track
@@ -17,11 +17,11 @@ class DFPLAYER {
 
   private:
     // Variables
-    static SoftwareSerial* _DFPport;
+    static Stream* _DFPport;
     static Stream* _serial;
     // Functions
     static void sendDFPCommand(uint8_t cmd, uint8_t param = 0x00); // Send data to the serial port
-    static void DFPLAYER::_setVolume();
+    static void _setVolume();
 };
 
 #endif
