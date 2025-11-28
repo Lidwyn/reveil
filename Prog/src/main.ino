@@ -526,7 +526,7 @@ void loop() { //-------------------------------------------------loop
       setupIsBlinking = !setupIsBlinking;
     }
     switch(selected){
-      case 0:{ // secondes
+      case 0:{ // heures
         myMAX7219_1.send(4, chiffres[(isSetting & 0b00110000)>>4]);
         myMAX7219_1.send(3, chiffres[isSetting & 0b00001111]);
         if(setupIsBlinking){
