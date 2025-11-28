@@ -1117,7 +1117,7 @@ void loop() { //-------------------------------------------------loop
     if(!isReset){
       if(!isAwake){
         PCICR = 0; // Deactivate interruptions
-        myMAX7219_1.send(4,0);
+        myMAX7219_1.send(4,0);  // Deactivate display during DFPlayer wake up
         myMAX7219_1.send(3,0);
         myMAX7219_1.send(2,0);
         myMAX7219_1.send(1,0);
@@ -1129,17 +1129,14 @@ void loop() { //-------------------------------------------------loop
         myMAX7219_2.send(1, 0);
         myMAX7219_2.send(5, 0);
         DFPLAYER::wakeUp();
-        Serial.println("DFPlayer wake up");
         alarmWakeUpTimer = now;
         isAwake = true;
       }
 
       if((now - alarmWakeUpTimer) > wakeUpTime){ // Cannot send an UART msg just after awaking the DFPlayer, need to wait
         DFPLAYER::wakeUpReset(); // Reset is for volume mainly
-        Serial.println("DFPlayer reset");
         delay(15); // Necessary or the first msg will not be send
         DFPLAYER::play(); // Start playing the alarm
-        Serial.println("DFPlayer playing");
         isReset = true;
         setupIsBlinking = false; // Start blinking
       }
@@ -1149,12 +1146,9 @@ void loop() { //-------------------------------------------------loop
       const bool stopButton = digitalRead(btA);
       
       if(stopButton){ // End of alarm/mode 3
-        Serial.println("Stopping");
         DFPLAYER::pause(); // Stop the audio
-        Serial.println("DFPlayer pause");
         delay(15);
         DFPLAYER::toSleep(); // Turn the DFPlayer off
-        Serial.println("DFPlayer to sleep");
 
         isAwake = false; // Reset the alarm mode variables
         isReset = false;
@@ -1180,7 +1174,6 @@ void loop() { //-------------------------------------------------loop
       if(now - lastBlink > blinkTime){ // Checking if blinking
         lastBlink = now;
         setupIsBlinking = !setupIsBlinking;
-        Serial.println("blink");
       }
 
       DS3231::readDisplayTime(displayTime);

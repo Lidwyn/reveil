@@ -10,3 +10,7 @@ Prog/.pio/
 Prog/test/
 
 Prog/Minicore/
+
+Schematic/Schematic-backups/
+Schematic/Schematic.kicad_prl
+Schematic/fp-info-cache
