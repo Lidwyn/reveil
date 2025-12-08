@@ -1248,17 +1248,17 @@ uint8_t modifyAlarmIsSetting(const uint8_t selectedParam, const bool setupUp, ui
     {23, 0}, // heure entre 0 et 23
     {59, 0} // minute entre 0 et 59
   };
-  if(selectedParam < 2){
-    data = computeValue(data); // + ou - 1 en fonction de setupUp
-    if(setupUp){
-      data = data == bounds[selected][0] ? bounds[selected][1] : data + 1; // test valeurs max
+  if(selectedParam < 2){ // Hours and minutes part
+    data = computeValue(data);
+    if(setupUp){ // If true then going up
+      data = (data == bounds[selectedParam][0]) ? bounds[selectedParam][1] : data + 1; // Testing bound
     }
     else{
-      data = data == bounds[selected][1] ? bounds[selected][0] : data - 1; // test valeurs min
+      data = (data == bounds[selectedParam][1]) ? bounds[selectedParam][0] : data - 1; // Testing bound
     }
     return computeValueInv(data);
   }
-  else {
+  else {  // Day part
     return data ^ (1 << (selectedParam - 2));
   }
 }
@@ -1319,10 +1319,10 @@ uint8_t modifyIsSetting(const uint8_t selectedParam, const bool setupUp, uint8_t
   };
   data = computeValue(data); // + ou - 1 en fonction de setupUp
   if(setupUp){
-    data = data == bounds[selected][0] ? bounds[selected][1] : data + 1; // test valeurs max
+    data = data == bounds[selectedParam][0] ? bounds[selectedParam][1] : data + 1; // test valeurs max
   }
   else{
-    data = data == bounds[selected][1] ? bounds[selected][0] : data - 1; // test valeurs min
+    data = data == bounds[selectedParam][1] ? bounds[selectedParam][0] : data - 1; // test valeurs min
   }
   return computeValueInv(data);
 }

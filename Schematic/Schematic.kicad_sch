@@ -4,6 +4,12 @@
 	(generator_version "9.0")
 	(uuid "b8d7986e-4643-4dab-a6e6-becf1d474208")
 	(paper "A3")
+	(title_block
+		(title "Alarm Clock Full Schematic")
+		(date "2025-12-06")
+		(rev "1")
+		(company "Lidwyn")
+	)
 	(lib_symbols
 		(symbol "Connector:Conn_01x02_Pin"
 			(pin_names
@@ -14288,10 +14294,10 @@
 			(uuid "c93e2c85-e680-460b-952f-5fc33759ffe7")
 		)
 		(pin "3"
-			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a371f")
+			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a3722")
 		)
 		(pin "4"
-			(uuid "1a310abd-c57a-4684-af5f-62a9fabde87c")
+			(uuid "1a310abd-c57a-4684-af5f-62a9fabde87f")
 		)
 		(pin "1"
 			(uuid "a723a35d-2a70-4b88-b849-7b537d3beb29")
@@ -14571,10 +14577,10 @@
 			(uuid "cdcaa912-5da3-4489-a2d4-702e48b9020a")
 		)
 		(pin "3"
-			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a3722")
+			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a3723")
 		)
 		(pin "4"
-			(uuid "1a310abd-c57a-4684-af5f-62a9fabde87f")
+			(uuid "1a310abd-c57a-4684-af5f-62a9fabde880")
 		)
 		(pin "1"
 			(uuid "281732e0-d620-4ba2-be47-f9b00ea5b7e8")
@@ -14645,10 +14651,10 @@
 			(uuid "ea2ec9fe-c95b-42a4-ba99-a4cceaefa8c2")
 		)
 		(pin "3"
-			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a3723")
+			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a3724")
 		)
 		(pin "4"
-			(uuid "1a310abd-c57a-4684-af5f-62a9fabde880")
+			(uuid "1a310abd-c57a-4684-af5f-62a9fabde881")
 		)
 		(pin "1"
 			(uuid "caaf4faf-6962-49b5-bd8a-a4c6e18c51e6")
@@ -15969,10 +15975,10 @@
 			(uuid "5dbc78cf-6588-4bab-864a-30f3922d2d9f")
 		)
 		(pin "3"
-			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a371f")
+			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a3725")
 		)
 		(pin "4"
-			(uuid "1a310abd-c57a-4684-af5f-62a9fabde87c")
+			(uuid "1a310abd-c57a-4684-af5f-62a9fabde882")
 		)
 		(pin "1"
 			(uuid "94d66bed-2bea-4fec-9083-da13fa2cadb5")
@@ -16109,10 +16115,10 @@
 			(uuid "97fedfb6-a956-49f0-a979-4820e3be6581")
 		)
 		(pin "3"
-			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a3724")
+			(uuid "fe156c8b-4a6f-45bc-abaf-3302951a3726")
 		)
 		(pin "4"
-			(uuid "1a310abd-c57a-4684-af5f-62a9fabde881")
+			(uuid "1a310abd-c57a-4684-af5f-62a9fabde883")
 		)
 		(pin "1"
 			(uuid "1950af8d-7099-42f9-9fb2-c864e766ff9f")
