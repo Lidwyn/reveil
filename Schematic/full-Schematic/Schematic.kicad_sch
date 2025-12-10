@@ -6,9 +6,11 @@
 	(paper "A3")
 	(title_block
 		(title "Alarm Clock Full Schematic")
-		(date "2025-12-06")
+		(date "2025-12-10")
 		(rev "1")
 		(company "Lidwyn")
+		(comment 1 "It is not meant to be printed as a PCB")
+		(comment 2 "This schematic provides an overview of the entire project for explanatory purposes")
 	)
 	(lib_symbols
 		(symbol "Connector:Conn_01x02_Pin"
