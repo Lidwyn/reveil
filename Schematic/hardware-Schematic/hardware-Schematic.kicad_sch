@@ -215,20 +215,18 @@
 					(hide yes)
 				)
 			)
-			(symbol "12_Pin_IDC_male_connector_0_1"
+			(symbol "12_Pin_IDC_male_connector_1_1"
 				(rectangle
 					(start -1.27 0)
 					(end 1.27 -33.02)
 					(stroke
 						(width 0)
-						(type default)
+						(type solid)
 					)
 					(fill
-						(type none)
+						(type background)
 					)
 				)
-			)
-			(symbol "12_Pin_IDC_male_connector_1_1"
 				(text "12 PIN connector"
 					(at 0 -16.51 900)
 					(effects

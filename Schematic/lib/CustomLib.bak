@@ -491,11 +491,10 @@
 		)
 		(symbol "12_Pin_IDC_male_connector_1_1"
 			(text "12 PIN connector"
-				(at -7.874 -13.97 0)
+				(at 0 -16.51 900)
 				(effects
 					(font
 						(size 1.27 1.27)
-						(color 0 180 200 1)
 					)
 				)
 			)
