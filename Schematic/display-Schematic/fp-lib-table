@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "CustomFootprintLib")(type "KiCad")(uri "/mnt/nvme/Projet/reveil/Schematic/lib/CustomFootprintLib.pretty")(options "")(descr ""))
+)
