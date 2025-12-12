@@ -1203,7 +1203,7 @@
 					(type background)
 				)
 			)
-			(pin output line
+			(pin bidirectional line
 				(at -11.43 -1.27 0)
 				(length 2.54)
 				(name "RX"
@@ -1221,7 +1221,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin bidirectional line
 				(at -11.43 -3.81 0)
 				(length 2.54)
 				(name "TX"
@@ -1239,7 +1239,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at -11.43 -6.35 0)
 				(length 2.54)
 				(name "IO_1"
@@ -1257,7 +1257,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at -11.43 -8.89 0)
 				(length 2.54)
 				(name "IO_2"
@@ -1275,7 +1275,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at -11.43 -11.43 0)
 				(length 2.54)
 				(name "ADKEY_1"
@@ -1293,7 +1293,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at -11.43 -13.97 0)
 				(length 2.54)
 				(name "ADKEY_2"
@@ -1311,7 +1311,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at -11.43 -16.51 0)
 				(length 2.54)
 				(name "USB+"
@@ -1329,7 +1329,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at -11.43 -19.05 0)
 				(length 2.54)
 				(name "USB6"
@@ -1365,7 +1365,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at -1.27 -25.4 90)
 				(length 2.54)
 				(name "GND"
@@ -1383,7 +1383,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at 0 2.54 270)
 				(length 2.54)
 				(name "VCC"
@@ -1401,7 +1401,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at 1.27 -25.4 90)
 				(length 2.54)
 				(name "GND"
@@ -1628,7 +1628,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at 0 2.54 270)
 				(length 2.54)
 				(name "VCC"
@@ -1646,7 +1646,7 @@
 					)
 				)
 			)
-			(pin output line
+			(pin input line
 				(at 0 -15.24 90)
 				(length 2.54)
 				(name "GND"
@@ -1718,7 +1718,7 @@
 			)
 		)
 		(symbol "MP1584_1_0"
-			(pin input line
+			(pin bidirectional line
 				(at 8.89 -10.16 180)
 				(length 2.54)
 				(name "OUT-"
@@ -1728,7 +1728,25 @@
 						)
 					)
 				)
-				(number ""
+				(number "7"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin bidirectional line
+				(at 8.89 -12.7 180)
+				(length 2.54)
+				(name "OUT-"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "8"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1740,7 +1758,7 @@
 		(symbol "MP1584_1_1"
 			(rectangle
 				(start -6.35 0)
-				(end 6.35 -12.7)
+				(end 6.35 -15.24)
 				(stroke
 					(width 0)
 					(type solid)
@@ -1750,7 +1768,7 @@
 				)
 			)
 			(text "DC-DC"
-				(at 0.254 -6.35 0)
+				(at 0 -7.366 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -1768,7 +1786,25 @@
 						)
 					)
 				)
-				(number ""
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin input line
+				(at -8.89 -5.08 0)
+				(length 2.54)
+				(name "IN+"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1786,7 +1822,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "3"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1795,6 +1831,24 @@
 				)
 			)
 			(pin input line
+				(at -8.89 -12.7 0)
+				(length 2.54)
+				(name "IN-"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin output line
 				(at 8.89 -2.54 180)
 				(length 2.54)
 				(name "OUT+"
@@ -1804,7 +1858,25 @@
 						)
 					)
 				)
-				(number ""
+				(number "5"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin output line
+				(at 8.89 -5.08 180)
+				(length 2.54)
+				(name "OUT+"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "6"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -2725,7 +2797,7 @@
 					(type background)
 				)
 			)
-			(pin input line
+			(pin output line
 				(at -8.89 -2.54 0)
 				(length 2.54)
 				(name "DTR"
@@ -2743,7 +2815,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin bidirectional line
 				(at -8.89 -5.08 0)
 				(length 2.54)
 				(name "RX"
@@ -2761,7 +2833,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin bidirectional line
 				(at -8.89 -7.62 0)
 				(length 2.54)
 				(name "TX"
@@ -2797,7 +2869,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin output line
 				(at 0 2.54 270)
 				(length 2.54)
 				(name "VCC"

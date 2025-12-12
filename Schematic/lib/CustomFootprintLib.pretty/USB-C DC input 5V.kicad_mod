@@ -1,0 +1,156 @@
+(footprint "USB-C DC input 5V"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 -4.04 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "32095392-d2b7-47f9-a493-090d63b1dd05")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "USB-C DC input 5V"
+		(at 0 -2.54 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "ebe083ae-9fae-4f93-baee-51fb0ff0c38e")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "20fa9c54-8f66-4744-98a6-e97ea952fe52")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "8420a597-7627-432d-8b09-5a30eb246d20")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_rect
+		(start -8.1 0)
+		(end 8.1 5.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "77377eac-c60c-42c1-b350-f24d17687fd4")
+	)
+	(fp_rect
+		(start -8.1 1.72)
+		(end 8.1 2.54)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "4c290149-4a77-4b5d-b9f2-ce531fced6fb")
+	)
+	(fp_rect
+		(start -4.5 -8.73)
+		(end 4.5 1.72)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "Dwgs.User")
+		(uuid "28de5c7a-37c4-4632-b59f-2c555743dcda")
+	)
+	(fp_rect
+		(start -8.2 0)
+		(end 8.2 5.6)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "Margin")
+		(uuid "4003f33a-b760-4c27-9b30-fce1b9122eb8")
+	)
+	(fp_text user "+"
+		(at 1.27 3.81 0)
+		(unlocked yes)
+		(layer "Dwgs.User")
+		(uuid "4f84383b-c31e-4d24-9d35-f52e143d74e2")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "-"
+		(at -2.54 3.81 0)
+		(unlocked yes)
+		(layer "Dwgs.User")
+		(uuid "acda9d83-536c-409a-a9ab-324f37396443")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 -1.04 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "2692bdc3-fea6-4402-a92d-b15c70da8be0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at -1.27 1.27)
+		(size 1.524 1.524)
+		(drill 0.762)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "d98f9b37-39a8-4e2a-affb-c37aca39e4cf")
+	)
+	(pad "2" thru_hole circle
+		(at 1.27 1.27)
+		(size 1.524 1.524)
+		(drill 0.762)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "ee573498-34aa-4caf-ba1c-616f3c4be659")
+	)
+	(embedded_fonts no)
+)
