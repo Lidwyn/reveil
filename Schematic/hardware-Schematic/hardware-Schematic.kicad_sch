@@ -6268,7 +6268,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "CustomFootprintLib:DFPlayer"
 			(at 228.6 67.31 0)
 			(effects
 				(font
@@ -6576,7 +6576,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Button_Switch_THT:SW_PUSH_6mm"
 			(at 104.14 137.16 0)
 			(effects
 				(font
@@ -6649,7 +6649,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
 			(at 101.6 93.218 90)
 			(effects
 				(font
@@ -6917,7 +6917,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "CustomFootprintLib:MP1584"
 			(at 242.57 124.46 0)
 			(effects
 				(font
@@ -7138,7 +7138,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Package_TO_SOT_THT:TO-220F-3_Vertical"
 			(at 231.14 60.96 0)
 			(effects
 				(font
@@ -7369,7 +7369,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Button_Switch_THT:SW_PUSH_6mm"
 			(at 80.01 127 0)
 			(effects
 				(font
@@ -7769,7 +7769,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
 			(at 209.55 85.598 90)
 			(effects
 				(font
@@ -7968,7 +7968,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "CustomFootprintLib:HW-084_YP-05"
 			(at 120.65 102.87 0)
 			(effects
 				(font
@@ -8048,7 +8048,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Package_DIP:DIP-14_W7.62mm"
 			(at 171.45 68.58 0)
 			(effects
 				(font
@@ -8151,7 +8151,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
 			(at 74.168 135.89 90)
 			(effects
 				(font
@@ -8284,7 +8284,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
 			(at 209.55 83.058 90)
 			(effects
 				(font
@@ -8421,7 +8421,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "CustomFootprintLib:HW-084_YP-05"
 			(at 85.09 29.21 0)
 			(effects
 				(font
@@ -8504,7 +8504,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Button_Switch_THT:SW_PUSH_6mm"
 			(at 109.22 99.06 0)
 			(effects
 				(font
@@ -8578,7 +8578,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Button_Switch_THT:SW_PUSH_6mm"
 			(at 118.11 137.16 0)
 			(effects
 				(font
@@ -8606,16 +8606,16 @@
 			)
 		)
 		(pin "4"
-			(uuid "8412db60-5464-43ea-b76f-84ec108b030d")
+			(uuid "8412db60-5464-43ea-b76f-84ec108b030e")
 		)
 		(pin "3"
-			(uuid "ae0d72d6-5c1e-4b6d-9511-4ee50e54f263")
+			(uuid "ae0d72d6-5c1e-4b6d-9511-4ee50e54f264")
 		)
 		(pin "2"
-			(uuid "2a8ee5b3-ede8-4829-825e-dfbd4ba5e449")
+			(uuid "2a8ee5b3-ede8-4829-825e-dfbd4ba5e44a")
 		)
 		(pin "1"
-			(uuid "b474227e-6727-4bc4-97d3-568d48c76acd")
+			(uuid "b474227e-6727-4bc4-97d3-568d48c76ace")
 		)
 		(instances
 			(project ""
@@ -9180,7 +9180,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Package_DIP:DIP-14_W7.62mm"
 			(at 130.81 21.59 0)
 			(effects
 				(font
@@ -9433,7 +9433,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Connector_IDC:IDC-Header_2x06_P2.54mm_Vertical"
 			(at 172.72 121.92 0)
 			(effects
 				(font
@@ -9533,7 +9533,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "CustomFootprintLib:TopButton"
 			(at 248.92 85.09 0)
 			(effects
 				(font
@@ -9600,7 +9600,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Button_Switch_THT:SW_PUSH_6mm"
 			(at 90.17 137.16 0)
 			(effects
 				(font
@@ -9807,7 +9807,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "CustomFootprintLib:USB-C DC input 5V"
 			(at 196.85 127 0)
 			(effects
 				(font
@@ -10006,7 +10006,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Button_Switch_THT:SW_PUSH_6mm"
 			(at 91.44 97.79 0)
 			(effects
 				(font
@@ -10034,16 +10034,16 @@
 			)
 		)
 		(pin "4"
-			(uuid "dcd1c82d-0edf-49aa-859c-1da61a6e6757")
+			(uuid "dcd1c82d-0edf-49aa-859c-1da61a6e6758")
 		)
 		(pin "3"
-			(uuid "31c71d55-f26f-4509-9b7d-2f501f3686cc")
+			(uuid "31c71d55-f26f-4509-9b7d-2f501f3686cd")
 		)
 		(pin "2"
-			(uuid "bde8288f-a4a1-4fc4-8bfb-b959342bbcd7")
+			(uuid "bde8288f-a4a1-4fc4-8bfb-b959342bbcd8")
 		)
 		(pin "1"
-			(uuid "c80ec3d8-990d-476c-9406-1e1949a9f14d")
+			(uuid "c80ec3d8-990d-476c-9406-1e1949a9f14e")
 		)
 		(instances
 			(project ""

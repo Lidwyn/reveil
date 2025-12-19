@@ -1,0 +1,97 @@
+(footprint "TopButton"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 -4.75 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "2e651916-4397-4de1-9748-1ef3b605ee75")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "TopButton"
+		(at 0 -3.25 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "a97b648f-4721-4e73-b406-7f1ca7be81f1")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "33b3a07d-647e-4368-832b-a20fb46d48b8")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "b798de3d-5998-4403-8a36-40b80962b996")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_rect
+		(start -2.54 0)
+		(end 2.54 2.54)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "c5fea605-fe20-4dd5-b26b-f7f97b0204a3")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 -1.75 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "e98483f2-89f4-4946-a34e-3ea20e8d109b")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole circle
+		(at -1.27 1.27)
+		(size 1.524 1.524)
+		(drill 0.762)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "27c17b7e-bb4a-4d42-9c5f-0597b268eea4")
+	)
+	(pad "2" thru_hole circle
+		(at 1.27 1.27)
+		(size 1.524 1.524)
+		(drill 0.762)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "74801471-8c1a-4c22-a9e0-d1b42ac53c1d")
+	)
+	(embedded_fonts no)
+)
