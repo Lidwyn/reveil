@@ -73,7 +73,7 @@
 			(type solid)
 		)
 		(fill no)
-		(layer "Margin")
+		(layer "F.CrtYd")
 		(uuid "cb55b976-a6d6-436a-ab05-d84312ce5ae9")
 	)
 	(fp_text user "12101AR"
