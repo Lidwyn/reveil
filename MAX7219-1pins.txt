@@ -1,0 +1,14 @@
+            +----_----+
+    DIN   1 |DIN  DOUT| 24
+     RX   2 |D_0   S_D| 23 DDot + G
+     TX   3 |D_4  S_DP| 22
+Bouton+   4 |GND   S_E| 21
+Bouton-   5 |D_6   S_C| 20
+BoutonS   6 |D_2   VCC| 19
+    VCC   7 |D_3  ISET| 18
+    GND   8 |D_7   S_G| 17
+          9 |GND   S_B| 16
+         10 |D_5   S_F| 15
+BoutonA  11 |D_1   S_A| 14
+Bouton<  12 |LOAD  CLK| 13
+            +---------+
