@@ -80,42 +80,72 @@ uint8_t displayNextAlarm[3];
 volatile bool nightMode = false;
 
 //creation des éléments MAX7219 et de leur pin cs associé (SPI)
-MAX7219 myMAX7219_1(11);
-MAX7219 myMAX7219_2(10);
+MAX7219 myMAX7219_1(12);
+MAX7219 myMAX7219_2(11);
 bool ddot = true; //variable d'affichage des deux points
 volatile uint8_t brightness = 0x03; // Variable de luminosité des afficheurs (entre 0x00 et 0x0F)
 volatile bool brightnessFlag = false;
 
-//code d'affichage des chiffres pour les MAX7219/7seg respectivement de 0 à 9
-const uint8_t chiffres[10] = {
-  0b01111110,
+//numeral code for MAX7219/7seg from 0 to 9
+const uint8_t NumeralCode1[10] = {
+  0b11110110,
   0b00110000,
-  0b01101101,
-  0b01111001,
-  0b00110011,
-  0b01011011,
-  0b01011111,
-  0b01110000,
-  0b01111111,
-  0b01111011
+  0b01011110,
+  0b00111111,
+  0b10111000,
+  0b10101110,
+  0b11101110,
+  0b00110100,
+  0b11111110,
+  0b10111110
+};
+
+const uint8_t NumeralCode2[10] = {
+  0b10110111,
+  0b00010001,
+  0b00111110,
+  0b00111101,
+  0b10011001,
+  0b10101101,
+  0b10101111,
+  0b00010101,
+  0b10111111,
+  0b10111101
+};
+
+//address adaptator for MAX7219/7seg, address x != DIGx
+const uint8_t MAXAddress1[5] = {
+  0x08, // digit 4 = DIG7 (from right to left on the display)
+  0x04, // digit 3 = DIG3
+  0x03, // digit 2 = DIG2
+  0x07, // digit 1 = DIG6
+  0x01  // ddot = DIG0
+};
+
+const uint8_t MAXAddress2[5] = {
+  0x03, // digit 4 = DIG2 (from right to left on the display)
+  0x07, // digit 3 = DIG6
+  0x05, // digit 2 = DIG4
+  0x01, // digit 1 = DIG0
+  0x04  // leds = DIG3
 };
 
 //PIN des bouton
-uint8_t btPlus = 2;         // bouton + sur D2 / PIN 4 / PCINT18
+uint8_t btPlus = 5;         // bouton + sur D5 / PIN 11 / PCINT21
 bool btPlusLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
-uint8_t btMoins = 3;        // bouton - sur D3 / PIN 5 / PCINT19
+uint8_t btMoins = 7;        // bouton - sur D7 / PIN 13 / PCINT23
 bool btMoinsLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
-uint8_t btSetup = 4;        // bouton setup sur D4 / PIN 6 / PCINT20
-uint8_t btA = 5;            // bouton au dessus du reveil sur D5 / PIN 11 / PCINT21
-uint8_t btGauche = 6;       // bouton gauche sur D6 / PIN 12 / PCINT22
+uint8_t btSetup = 3;        // bouton setup sur D3 / PIN 5 / PCINT19
+uint8_t btA = 4;            // bouton au dessus du reveil sur D4 / PIN 6 / PCINT20
+uint8_t btGauche = 2;       // bouton gauche sur D2 / PIN 4 / PCINT18
 bool btGaucheLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
-uint8_t btDroite = 7;       // bouton droite sur D7 / PIN 13 / PCINT23
+uint8_t btDroite = 6;       // bouton droite sur D6 / PIN 12 / PCINT22
 bool btDroiteLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
 
 //Audio
-const uint8_t DFPrx = 8;
-const uint8_t DFPtx = 9;
-const uint8_t DFPpower = A0;
+const uint8_t DFPrx = 8; // to TX
+const uint8_t DFPtx = 9; // to RX
+// const uint8_t DFPpower = A0; // Not A0 but PB6 which doesn't have number in the standard Arduino core
 AltSoftSerial DFPlayerPort; // RX = D8/PB0 TX = D9/PB1 (forced)
 bool isAwake = false;
 bool isReset = false;
@@ -128,8 +158,9 @@ void setup() { //-------------------------------------------------setup
   //Audio
   pinMode(DFPrx, OUTPUT);
   pinMode(DFPtx, OUTPUT);
-  pinMode(DFPpower, OUTPUT);
-  digitalWrite(DFPpower, LOW);  // Turning the DFPlayer on for setup (low = on --> mosfet P-channel)
+  DDRB |= (1 << DDB6); // Same as pinMode(DFPpower, OUTPUT);
+  PORTB |= (1 << PORTB6); // Same as digitalWrite(DFPpower, LOW);
+  // Turning the DFPlayer on for setup (low = on --> mosfet P-channel)
   // 1 sec delay necessary after this, so the rest of the setup is found at the end 
   //Sleep_mode init
 
@@ -141,22 +172,22 @@ void setup() { //-------------------------------------------------setup
   Serial.println("Hello from ATmega328P !");
 
   //Display init
-  MAX7219::begin(12, 13, &Serial);
+  MAX7219::begin(13, 10, &Serial);
   myMAX7219_1.init();
   myMAX7219_2.init();
 
   //Turning the display on while setup
-  myMAX7219_1.send(1, 0xff);  // Turning on all the led for every 7-seg
-  myMAX7219_1.send(2, 0xff);
-  myMAX7219_1.send(3, 0xff);
-  myMAX7219_1.send(4, 0xff);
-  myMAX7219_1.send(5, 0xff);
+  myMAX7219_1.send(MAXAddress1[0], 0xff);  // Turning on all the led for every 7-seg
+  myMAX7219_1.send(MAXAddress1[1], 0xff);
+  myMAX7219_1.send(MAXAddress1[2], 0xff);
+  myMAX7219_1.send(MAXAddress1[3], 0xff);
+  myMAX7219_1.send(MAXAddress1[4], 0xff);
 
-  myMAX7219_2.send(1, 0xff);
-  myMAX7219_2.send(2, 0xff);
-  myMAX7219_2.send(3, 0xff);
-  myMAX7219_2.send(4, 0xff);
-  myMAX7219_2.send(5, 0xff);
+  myMAX7219_2.send(MAXAddress2[0], 0xff);
+  myMAX7219_2.send(MAXAddress2[1], 0xff);
+  myMAX7219_2.send(MAXAddress2[2], 0xff);
+  myMAX7219_2.send(MAXAddress2[3], 0xff);
+  myMAX7219_2.send(MAXAddress2[4], 0xff);
 
   //I2C init
   Wire.begin(); // wire.h setup for I2C bus
@@ -172,16 +203,16 @@ void setup() { //-------------------------------------------------setup
   PCICR |= (1 << PCIE2);      // Active les interruptions PCINT[16:23] --> PD0 à PD7 / D0 à D7
 
   pinMode(btPlus, INPUT);     // pinMode bouton
-  PCMSK2 |= (1 << PCINT18);   // Active l'interruption
+  PCMSK2 |= (1 << PCINT21);   // Active l'interruption
   pinMode(btMoins, INPUT);
-  PCMSK2 |= (1 << PCINT19);
+  PCMSK2 |= (1 << PCINT23);
   pinMode(btSetup, INPUT);
-  PCMSK2 |= (1 << PCINT20);
+  PCMSK2 |= (1 << PCINT19);
   pinMode(btA, INPUT);
-  PCMSK2 |= (1 << PCINT21);
+  PCMSK2 |= (1 << PCINT20);
   pinMode(btGauche, INPUT);   // Pas d'interruption sur le bouton gauche
   pinMode(btDroite, INPUT);
-  PCMSK2 |= (1 << PCINT23);
+  PCMSK2 |= (1 << PCINT22);
   
   sei();  // Active les interruption globale
 
@@ -315,34 +346,34 @@ void setup() { //-------------------------------------------------setup
     delay(50);
   }
   DFPlayerPort.begin(9600);
-  DFPLAYER::begin(&DFPlayerPort, DFPrx, DFPtx, DFPpower, &Serial);
+  DFPLAYER::begin(&DFPlayerPort, DFPrx, DFPtx, PORTB6, &Serial);
   delay(50);
   DFPLAYER::toSleep();
   //Turning of the display
-  myMAX7219_1.send(1, 0);
-  myMAX7219_1.send(2, 0);
-  myMAX7219_1.send(3, 0);
-  myMAX7219_1.send(4, 0);
-  myMAX7219_1.send(5, 0);
+  myMAX7219_1.send(MAXAddress1[0], 0);
+  myMAX7219_1.send(MAXAddress1[1], 0);
+  myMAX7219_1.send(MAXAddress1[2], 0);
+  myMAX7219_1.send(MAXAddress1[3], 0);
+  myMAX7219_1.send(MAXAddress1[4], 0);
 
-  myMAX7219_2.send(1, 0);
-  myMAX7219_2.send(2, 0);
-  myMAX7219_2.send(3, 0);
-  myMAX7219_2.send(4, 0);
-  myMAX7219_2.send(5, 0);
+  myMAX7219_2.send(MAXAddress2[0], 0);
+  myMAX7219_2.send(MAXAddress2[1], 0);
+  myMAX7219_2.send(MAXAddress2[2], 0);
+  myMAX7219_2.send(MAXAddress2[3], 0);
+  myMAX7219_2.send(MAXAddress2[4], 0);
   delay(500); // Black display for .5s to signal en of setup
 
   //First display
-  myMAX7219_1.send(4, chiffres[(displayTime[1] & 0b00110000)>>4]);
-  myMAX7219_1.send(3, chiffres[displayTime[1] & 0b00001111]);
-  myMAX7219_1.send(2, chiffres[(displayTime[0] & 0b01110000)>>4]);
-  myMAX7219_1.send(1, chiffres[displayTime[0] & 0b00001111]);
+  myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(displayTime[1] & 0b00110000)>>4]);
+  myMAX7219_1.send(MAXAddress1[2], NumeralCode1[displayTime[1] & 0b00001111]);
+  myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(displayTime[0] & 0b01110000)>>4]);
+  myMAX7219_1.send(MAXAddress1[0], NumeralCode1[displayTime[0] & 0b00001111]);
 
-  myMAX7219_2.send(4, chiffres[(displayNextAlarm[1] & 0b00110000)>>4]);
-  myMAX7219_2.send(3, chiffres[displayNextAlarm[1] & 0b00001111]);
-  myMAX7219_2.send(2, chiffres[(displayNextAlarm[0] & 0b01110000)>>4]);
-  myMAX7219_2.send(1, chiffres[displayNextAlarm[0] & 0b00001111]);
-  myMAX7219_2.send(5, displayNextAlarm[2]);
+  myMAX7219_2.send(MAXAddress2[3], NumeralCode2[(displayNextAlarm[1] & 0b00110000)>>4]);
+  myMAX7219_2.send(MAXAddress2[2], NumeralCode2[displayNextAlarm[1] & 0b00001111]);
+  myMAX7219_2.send(MAXAddress2[1], NumeralCode2[(displayNextAlarm[0] & 0b01110000)>>4]);
+  myMAX7219_2.send(MAXAddress2[0], NumeralCode2[displayNextAlarm[0] & 0b00001111]);
+  myMAX7219_2.send(MAXAddress2[4], dayLedsCompute(displayNextAlarm[2]));
   Serial.println("setup end");
   /*Serial.println("fin setup/debut nonboucle debug");
   Serial.print("setup realise en : ");
@@ -363,11 +394,11 @@ void loop() { //-------------------------------------------------loop
         //display time
         DS3231::readDisplayTime(displayTime);
         
-        myMAX7219_1.send(4, chiffres[(displayTime[1] & 0b00110000)>>4]);
-        myMAX7219_1.send(3, chiffres[displayTime[1] & 0b00001111]);
-        myMAX7219_1.send(2, chiffres[(displayTime[0] & 0b01110000)>>4]);
-        myMAX7219_1.send(1, chiffres[displayTime[0] & 0b00001111]);
-        myMAX7219_1.send(5, ddot<<6);
+        myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(displayTime[1] & 0b00110000)>>4]);
+        myMAX7219_1.send(MAXAddress1[2], NumeralCode1[displayTime[1] & 0b00001111]);
+        myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(displayTime[0] & 0b01110000)>>4]);
+        myMAX7219_1.send(MAXAddress1[0], NumeralCode1[displayTime[0] & 0b00001111]);
+        myMAX7219_1.send(MAXAddress1[4], ddot<<3);
         ddot = !ddot;
 
         if (lastMinute != computeValue(displayTime[0])){
@@ -387,34 +418,34 @@ void loop() { //-------------------------------------------------loop
 
         if(refreshNextAlarmDislpay){
           if(nbActive != 0){
-            myMAX7219_2.send(4, chiffres[(displayNextAlarm[1] & 0b00110000)>>4]);
-            myMAX7219_2.send(3, chiffres[displayNextAlarm[1] & 0b00001111]);
-            myMAX7219_2.send(2, chiffres[(displayNextAlarm[0] & 0b01110000)>>4]);
-            myMAX7219_2.send(1, chiffres[displayNextAlarm[0] & 0b00001111]);
-            myMAX7219_2.send(5, displayNextAlarm[2]);
+            myMAX7219_2.send(MAXAddress2[3], NumeralCode2[(displayNextAlarm[1] & 0b00110000)>>4]);
+            myMAX7219_2.send(MAXAddress2[2], NumeralCode2[displayNextAlarm[1] & 0b00001111]);
+            myMAX7219_2.send(MAXAddress2[1], NumeralCode2[(displayNextAlarm[0] & 0b01110000)>>4]);
+            myMAX7219_2.send(MAXAddress2[0], NumeralCode2[displayNextAlarm[0] & 0b00001111]);
+            myMAX7219_2.send(MAXAddress2[4], dayLedsCompute(displayNextAlarm[2]));
           }
           else {
-            myMAX7219_2.send(4, 0);
-            myMAX7219_2.send(3, 0);
-            myMAX7219_2.send(2, 0);
-            myMAX7219_2.send(1, 0);
-            myMAX7219_2.send(5, 0);
+            myMAX7219_2.send(MAXAddress2[3], 0);
+            myMAX7219_2.send(MAXAddress2[2], 0);
+            myMAX7219_2.send(MAXAddress2[1], 0);
+            myMAX7219_2.send(MAXAddress2[0], 0);
+            myMAX7219_2.send(MAXAddress2[4], 0);
           }
           refreshNextAlarmDislpay = false;
         }
       }
       else{
-        myMAX7219_1.send(1, 0);
-        myMAX7219_1.send(2, 0);
-        myMAX7219_1.send(3, 0);
-        myMAX7219_1.send(4, 0);
-        myMAX7219_1.send(5, 0);
+        myMAX7219_1.send(MAXAddress1[0], 0);
+        myMAX7219_1.send(MAXAddress1[1], 0);
+        myMAX7219_1.send(MAXAddress1[2], 0);
+        myMAX7219_1.send(MAXAddress1[3], 0);
+        myMAX7219_1.send(MAXAddress1[4], 0);
 
-        myMAX7219_2.send(1, 0);
-        myMAX7219_2.send(2, 0);
-        myMAX7219_2.send(3, 0);
-        myMAX7219_2.send(4, 0);
-        myMAX7219_2.send(5, 0);
+        myMAX7219_2.send(MAXAddress2[0], 0);
+        myMAX7219_2.send(MAXAddress2[1], 0);
+        myMAX7219_2.send(MAXAddress2[2], 0);
+        myMAX7219_2.send(MAXAddress2[3], 0);
+        myMAX7219_2.send(MAXAddress2[4], 0);
       }
       delay(10);
     }
@@ -527,176 +558,176 @@ void loop() { //-------------------------------------------------loop
     }
     switch(selected){
       case 0:{ // heures
-        myMAX7219_1.send(4, chiffres[(isSetting & 0b00110000)>>4]);
-        myMAX7219_1.send(3, chiffres[isSetting & 0b00001111]);
+        myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(isSetting & 0b00110000)>>4]);
+        myMAX7219_1.send(MAXAddress1[2], NumeralCode1[isSetting & 0b00001111]);
         if(setupIsBlinking){
-          myMAX7219_1.send(2, chiffres[(newTimeData[1] & 0b01110000)>>4]);
-          myMAX7219_1.send(1, chiffres[newTimeData[1] & 0b00001111]);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, chiffres[(newTimeData[0] & 0b01110000)>>4]);
-          myMAX7219_2.send(3, chiffres[newTimeData[0] & 0b00001111]);
-          myMAX7219_2.send(2, 0);
-          myMAX7219_2.send(1, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(newTimeData[1] & 0b01110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[0], NumeralCode1[newTimeData[1] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], NumeralCode2[(newTimeData[0] & 0b01110000)>>4]);
+          myMAX7219_2.send(MAXAddress2[2], NumeralCode2[newTimeData[0] & 0b00001111]);
+          myMAX7219_2.send(MAXAddress2[1], 0);
+          myMAX7219_2.send(MAXAddress2[0], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         else{
-          myMAX7219_1.send(2, 0);
-          myMAX7219_1.send(1, 0);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, 0);
-          myMAX7219_2.send(3, 0);
-          myMAX7219_2.send(2, 0);
-          myMAX7219_2.send(1, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[1], 0);
+          myMAX7219_1.send(MAXAddress1[0], 0);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], 0);
+          myMAX7219_2.send(MAXAddress2[2], 0);
+          myMAX7219_2.send(MAXAddress2[1], 0);
+          myMAX7219_2.send(MAXAddress2[0], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         break;
       }
       case 1:{ // minutes
-        myMAX7219_1.send(2, chiffres[(isSetting & 0b01110000)>>4]);
-        myMAX7219_1.send(1, chiffres[isSetting & 0b00001111]);
+        myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(isSetting & 0b01110000)>>4]);
+        myMAX7219_1.send(MAXAddress1[0], NumeralCode1[isSetting & 0b00001111]);
         if(setupIsBlinking){
-          myMAX7219_1.send(4, chiffres[(newTimeData[2] & 0b00110000)>>4]);
-          myMAX7219_1.send(3, chiffres[newTimeData[2] & 0b00001111]);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, chiffres[(newTimeData[0] & 0b01110000)>>4]);
-          myMAX7219_2.send(3, chiffres[newTimeData[0] & 0b00001111]);
-          myMAX7219_2.send(2, 0);
-          myMAX7219_2.send(1, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(newTimeData[2] & 0b00110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[2], NumeralCode1[newTimeData[2] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], NumeralCode2[(newTimeData[0] & 0b01110000)>>4]);
+          myMAX7219_2.send(MAXAddress2[2], NumeralCode2[newTimeData[0] & 0b00001111]);
+          myMAX7219_2.send(MAXAddress2[1], 0);
+          myMAX7219_2.send(MAXAddress2[0], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         else{
-            myMAX7219_1.send(4, 0);
-            myMAX7219_1.send(3, 0);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(4, 0);
-            myMAX7219_2.send(3, 0);
-            myMAX7219_2.send(2, 0);
-            myMAX7219_2.send(1, 0);
-            myMAX7219_2.send(5, 0);
+            myMAX7219_1.send(MAXAddress1[3], 0);
+            myMAX7219_1.send(MAXAddress1[2], 0);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[3], 0);
+            myMAX7219_2.send(MAXAddress2[2], 0);
+            myMAX7219_2.send(MAXAddress2[1], 0);
+            myMAX7219_2.send(MAXAddress2[0], 0);
+            myMAX7219_2.send(MAXAddress2[4], 0);
         }
         break;
       }
       case 2:{ // secondes
-        myMAX7219_2.send(4, chiffres[(isSetting & 0b01110000)>>4]);
-        myMAX7219_2.send(3, chiffres[isSetting & 0b00001111]);
+        myMAX7219_2.send(MAXAddress2[3], NumeralCode2[(isSetting & 0b01110000)>>4]);
+        myMAX7219_2.send(MAXAddress2[2], NumeralCode2[isSetting & 0b00001111]);
         if(setupIsBlinking){
-          myMAX7219_1.send(4, chiffres[(newTimeData[2] & 0b00110000)>>4]);
-          myMAX7219_1.send(3, chiffres[newTimeData[2] & 0b00001111]);
-          myMAX7219_1.send(2, chiffres[(newTimeData[1] & 0b01110000)>>4]);
-          myMAX7219_1.send(1, chiffres[newTimeData[1] & 0b00001111]);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(2, 0);
-          myMAX7219_2.send(1, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(newTimeData[2] & 0b00110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[2], NumeralCode1[newTimeData[2] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(newTimeData[1] & 0b01110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[0], NumeralCode1[newTimeData[1] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[1], 0);
+          myMAX7219_2.send(MAXAddress2[0], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         else{
-          myMAX7219_1.send(4, 0);
-          myMAX7219_1.send(3, 0);
-          myMAX7219_1.send(2, 0);
-          myMAX7219_1.send(1, 0);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(2, 0);
-          myMAX7219_2.send(1, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[3], 0);
+          myMAX7219_1.send(MAXAddress1[2], 0);
+          myMAX7219_1.send(MAXAddress1[1], 0);
+          myMAX7219_1.send(MAXAddress1[0], 0);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[1], 0);
+          myMAX7219_2.send(MAXAddress2[0], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         break;
       }
       case 3:{ // jour
-        myMAX7219_1.send(4, chiffres[(isSetting & 0b00110000)>>4]);
-        myMAX7219_1.send(3, chiffres[isSetting & 0b00001111]);
+        myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(isSetting & 0b00110000)>>4]);
+        myMAX7219_1.send(MAXAddress1[2], NumeralCode1[isSetting & 0b00001111]);
         if(setupIsBlinking){
-          myMAX7219_1.send(2, chiffres[(newTimeData[5] & 0b01110000)>>4]);
-          myMAX7219_1.send(1, chiffres[newTimeData[5] & 0b00001111]);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, chiffres[2]);
-          myMAX7219_2.send(3, chiffres[0]);
-          myMAX7219_2.send(2, chiffres[(newTimeData[6] & 0b11110000)>>4]);
-          myMAX7219_2.send(1, chiffres[newTimeData[6] & 0b00001111]);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(newTimeData[5] & 0b01110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[0], NumeralCode1[newTimeData[5] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], NumeralCode2[2]);
+          myMAX7219_2.send(MAXAddress2[2], NumeralCode2[0]);
+          myMAX7219_2.send(MAXAddress2[1], NumeralCode2[(newTimeData[6] & 0b11110000)>>4]);
+          myMAX7219_2.send(MAXAddress2[0], NumeralCode2[newTimeData[6] & 0b00001111]);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         else{
-          myMAX7219_1.send(2, 0);
-          myMAX7219_1.send(1, 0);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, 0);
-          myMAX7219_2.send(3, 0);
-          myMAX7219_2.send(2, 0);
-          myMAX7219_2.send(1, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[1], 0);
+          myMAX7219_1.send(MAXAddress1[0], 0);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], 0);
+          myMAX7219_2.send(MAXAddress2[2], 0);
+          myMAX7219_2.send(MAXAddress2[1], 0);
+          myMAX7219_2.send(MAXAddress2[0], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         break;
       }
       case 4:{ // mois
-        myMAX7219_1.send(2, chiffres[(isSetting & 0b00010000)>>4]);
-        myMAX7219_1.send(1, chiffres[isSetting & 0b00001111]);
+        myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(isSetting & 0b00010000)>>4]);
+        myMAX7219_1.send(MAXAddress1[0], NumeralCode1[isSetting & 0b00001111]);
         if(setupIsBlinking){
-          myMAX7219_1.send(4, chiffres[(newTimeData[4] & 0b00110000)>>4]);
-          myMAX7219_1.send(3, chiffres[newTimeData[4] & 0b00001111]);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, chiffres[2]);
-          myMAX7219_2.send(3, chiffres[0]);
-          myMAX7219_2.send(2, chiffres[(newTimeData[6] & 0b11110000)>>4]);
-          myMAX7219_2.send(1, chiffres[newTimeData[6] & 0b00001111]);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(newTimeData[4] & 0b00110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[2], NumeralCode1[newTimeData[4] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], NumeralCode2[2]);
+          myMAX7219_2.send(MAXAddress2[2], NumeralCode2[0]);
+          myMAX7219_2.send(MAXAddress2[1], NumeralCode2[(newTimeData[6] & 0b11110000)>>4]);
+          myMAX7219_2.send(MAXAddress2[0], NumeralCode2[newTimeData[6] & 0b00001111]);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         else{
-          myMAX7219_1.send(4, 0);
-          myMAX7219_1.send(3, 0);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, 0);
-          myMAX7219_2.send(3, 0);
-          myMAX7219_2.send(2, 0);
-          myMAX7219_2.send(1, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[3], 0);
+          myMAX7219_1.send(MAXAddress1[2], 0);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], 0);
+          myMAX7219_2.send(MAXAddress2[2], 0);
+          myMAX7219_2.send(MAXAddress2[1], 0);
+          myMAX7219_2.send(MAXAddress2[0], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         break;
       }
       case 5:{ // année
-        myMAX7219_2.send(4, chiffres[2]);
-        myMAX7219_2.send(3, chiffres[0]);
-        myMAX7219_2.send(2, chiffres[(isSetting & 0b11110000)>>4]);
-        myMAX7219_2.send(1, chiffres[isSetting & 0b00001111]);
+        myMAX7219_2.send(MAXAddress2[3], NumeralCode2[2]);
+        myMAX7219_2.send(MAXAddress2[2], NumeralCode2[0]);
+        myMAX7219_2.send(MAXAddress2[1], NumeralCode2[(isSetting & 0b11110000)>>4]);
+        myMAX7219_2.send(MAXAddress2[0], NumeralCode2[isSetting & 0b00001111]);
         if(setupIsBlinking){
-          myMAX7219_1.send(4, chiffres[(newTimeData[4] & 0b00110000)>>4]);
-          myMAX7219_1.send(3, chiffres[newTimeData[4] & 0b00001111]);
-          myMAX7219_1.send(2, chiffres[(newTimeData[5] & 0b01110000)>>4]);
-          myMAX7219_1.send(1, chiffres[newTimeData[5] & 0b00001111]);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(newTimeData[4] & 0b00110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[2], NumeralCode1[newTimeData[4] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(newTimeData[5] & 0b01110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[0], NumeralCode1[newTimeData[5] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         else{
-          myMAX7219_1.send(4, 0);
-          myMAX7219_1.send(3, 0);
-          myMAX7219_1.send(2, 0);
-          myMAX7219_1.send(1, 0);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(5, 0);
+          myMAX7219_1.send(MAXAddress1[3], 0);
+          myMAX7219_1.send(MAXAddress1[2], 0);
+          myMAX7219_1.send(MAXAddress1[1], 0);
+          myMAX7219_1.send(MAXAddress1[0], 0);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[4], 0);
         }
         break;
       }
       case 6:{ // jour de la semaine
-        myMAX7219_2.send(5, 1<<(isSetting-1));
+        myMAX7219_2.send(MAXAddress2[4], dayLedsCompute(1<<(isSetting-1)));
         if(setupIsBlinking){
-          myMAX7219_1.send(4, chiffres[(newTimeData[4] & 0b00110000)>>4]);
-          myMAX7219_1.send(3, chiffres[newTimeData[4] & 0b00001111]);
-          myMAX7219_1.send(2, chiffres[(newTimeData[5] & 0b01110000)>>4]);
-          myMAX7219_1.send(1, chiffres[newTimeData[5] & 0b00001111]);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, chiffres[2]);
-          myMAX7219_2.send(3, chiffres[0]);
-          myMAX7219_2.send(2, chiffres[(newTimeData[6] & 0b11110000)>>4]);
-          myMAX7219_2.send(1, chiffres[newTimeData[6] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(newTimeData[4] & 0b00110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[2], NumeralCode1[newTimeData[4] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(newTimeData[5] & 0b01110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[0], NumeralCode1[newTimeData[5] & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], NumeralCode2[2]);
+          myMAX7219_2.send(MAXAddress2[2], NumeralCode2[0]);
+          myMAX7219_2.send(MAXAddress2[1], NumeralCode2[(newTimeData[6] & 0b11110000)>>4]);
+          myMAX7219_2.send(MAXAddress2[0], NumeralCode2[newTimeData[6] & 0b00001111]);
         }
         else{
-          myMAX7219_1.send(4, 0);
-          myMAX7219_1.send(3, 0);
-          myMAX7219_1.send(2, 0);
-          myMAX7219_1.send(1, 0);
-          myMAX7219_1.send(5, 0);
-          myMAX7219_2.send(4, 0);
-          myMAX7219_2.send(3, 0);
-          myMAX7219_2.send(2, 0);
-          myMAX7219_2.send(1, 0);
+          myMAX7219_1.send(MAXAddress1[3], 0);
+          myMAX7219_1.send(MAXAddress1[2], 0);
+          myMAX7219_1.send(MAXAddress1[1], 0);
+          myMAX7219_1.send(MAXAddress1[0], 0);
+          myMAX7219_1.send(MAXAddress1[4], 0);
+          myMAX7219_2.send(MAXAddress2[3], 0);
+          myMAX7219_2.send(MAXAddress2[2], 0);
+          myMAX7219_2.send(MAXAddress2[1], 0);
+          myMAX7219_2.send(MAXAddress2[0], 0);
         }
         break;
       }
@@ -813,88 +844,88 @@ void loop() { //-------------------------------------------------loop
 
       //display
       if(selectedAlarm == 0){ // ecran retour
-        myMAX7219_1.send(4, 0b01001111); // E
-        myMAX7219_1.send(3, 0b01011011); // S
-        myMAX7219_1.send(2, 0b01001110); // C
-        myMAX7219_1.send(1, 0b00000001); // -
-        myMAX7219_1.send(5, 0);
-        myMAX7219_2.send(4, 0);
-        myMAX7219_2.send(3, 0);
-        myMAX7219_2.send(2, 0);
-        myMAX7219_2.send(1, 0);
-        myMAX7219_2.send(5, 0);
+        myMAX7219_1.send(MAXAddress1[3], 0b11001110); // E
+        myMAX7219_1.send(MAXAddress1[2], 0b10101110); // S
+        myMAX7219_1.send(MAXAddress1[1], 0b11000110); // C
+        myMAX7219_1.send(MAXAddress1[0], 0b00001000); // -
+        myMAX7219_1.send(MAXAddress1[4], 0);
+        myMAX7219_2.send(MAXAddress2[3], 0);
+        myMAX7219_2.send(MAXAddress2[2], 0);
+        myMAX7219_2.send(MAXAddress2[1], 0);
+        myMAX7219_2.send(MAXAddress2[0], 0);
+        myMAX7219_2.send(MAXAddress2[4], 0);
       }
       else{
         if(!selectedType){ // alarme de type non unique
           if((selectedAlarm) <= ((nbAlarm & 0xf0)>>4)){ // Normal display, else : new alarm proposal
             alarmIsNew = false;
-            myMAX7219_1.send(4, chiffres[(AlarmNU[(selectedAlarm - 1) * 3 + 1] & 0b00110000)>>4]);
-            myMAX7219_1.send(3, chiffres[AlarmNU[(selectedAlarm - 1) * 3 + 1] & 0b00001111]);
-            myMAX7219_1.send(2, chiffres[(AlarmNU[(selectedAlarm - 1) * 3] & 0b01110000)>>4]);
-            myMAX7219_1.send(1, chiffres[AlarmNU[(selectedAlarm - 1) * 3] & 0b00001111]);
-            myMAX7219_1.send(5, (AlarmNU[(selectedAlarm - 1) * 3] & 0b10000000)>>1); // Alarm Activated indicator on ddot
-            myMAX7219_2.send(5, AlarmNU[(selectedAlarm - 1) * 3 + 2]);
+            myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(AlarmNU[(selectedAlarm - 1) * 3 + 1] & 0b00110000)>>4]);
+            myMAX7219_1.send(MAXAddress1[2], NumeralCode1[AlarmNU[(selectedAlarm - 1) * 3 + 1] & 0b00001111]);
+            myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(AlarmNU[(selectedAlarm - 1) * 3] & 0b01110000)>>4]);
+            myMAX7219_1.send(MAXAddress1[0], NumeralCode1[AlarmNU[(selectedAlarm - 1) * 3] & 0b00001111]);
+            myMAX7219_1.send(MAXAddress1[4], (AlarmNU[(selectedAlarm - 1) * 3] & 0b10000000)>>4); // Alarm Activated indicator on ddot
+            myMAX7219_2.send(MAXAddress2[4], dayLedsCompute(AlarmNU[(selectedAlarm - 1) * 3 + 2]));
             if(!confirmDelete){
-              myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
-              myMAX7219_2.send(3, chiffres[selectedAlarm % 10]);
-              myMAX7219_2.send(2, 0b00000001); // -
-              myMAX7219_2.send(1, chiffres[0]); // 0 = Non unique alarm
+              myMAX7219_2.send(MAXAddress2[3], NumeralCode2[selectedAlarm / 10]);
+              myMAX7219_2.send(MAXAddress2[2], NumeralCode2[selectedAlarm % 10]);
+              myMAX7219_2.send(MAXAddress2[1], 0b00001000); // -
+              myMAX7219_2.send(MAXAddress2[0], NumeralCode2[0]); // 0 = Non unique alarm
             }
             else{
-              myMAX7219_2.send(4, 0b01011011);
-              myMAX7219_2.send(3, 0b00111110);
-              myMAX7219_2.send(2, 0b01100111);
-              myMAX7219_2.send(1, 0b00000001);
+              myMAX7219_2.send(MAXAddress2[3], 0b10101101); // S
+              myMAX7219_2.send(MAXAddress2[2], 0b10110011); // U
+              myMAX7219_2.send(MAXAddress2[1], 0b10011110); // P
+              myMAX7219_2.send(MAXAddress2[0], 0b00001000); // -
             }
           }
           else{
             alarmIsNew = true;
-            myMAX7219_1.send(4, 0b00000001);
-            myMAX7219_1.send(3, 0);
-            myMAX7219_1.send(2, 0);
-            myMAX7219_1.send(1, 0);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
-            myMAX7219_2.send(3, chiffres[selectedAlarm % 10]);
-            myMAX7219_2.send(2, 0b00000001);
-            myMAX7219_2.send(1, chiffres[0]);
-            myMAX7219_2.send(5, 0);
+            myMAX7219_1.send(MAXAddress1[3], 0b00001000); // -
+            myMAX7219_1.send(MAXAddress1[2], 0);
+            myMAX7219_1.send(MAXAddress1[1], 0);
+            myMAX7219_1.send(MAXAddress1[0], 0);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[3], NumeralCode2[selectedAlarm / 10]);
+            myMAX7219_2.send(MAXAddress2[2], NumeralCode2[selectedAlarm % 10]);
+            myMAX7219_2.send(MAXAddress2[1], 0b00001000); // -
+            myMAX7219_2.send(MAXAddress2[0], NumeralCode2[0]);
+            myMAX7219_2.send(MAXAddress2[4], 0);
           }
         }
         else{ // alarme de type unique
           if((selectedAlarm) <= (nbAlarm & 0x0f)){ // affichage classique, sinon propo nouvelle alarme
             alarmIsNew = false;
-            myMAX7219_1.send(4, chiffres[(AlarmU[(selectedAlarm - 1) * 2 + 1] & 0b00110000)>>4]);
-            myMAX7219_1.send(3, chiffres[AlarmU[(selectedAlarm - 1) * 2 + 1] & 0b00001111]);
-            myMAX7219_1.send(2, chiffres[(AlarmU[(selectedAlarm - 1) * 2] & 0b01110000)>>4]);
-            myMAX7219_1.send(1, chiffres[AlarmU[(selectedAlarm - 1) * 2] & 0b00001111]);
-            myMAX7219_1.send(5, (AlarmU[(selectedAlarm - 1) * 2] & 0b10000000)>>1); // Alarm Activated indicator on ddot
-            myMAX7219_2.send(5, 0);
+            myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(AlarmU[(selectedAlarm - 1) * 2 + 1] & 0b00110000)>>4]);
+            myMAX7219_1.send(MAXAddress1[2], NumeralCode1[AlarmU[(selectedAlarm - 1) * 2 + 1] & 0b00001111]);
+            myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(AlarmU[(selectedAlarm - 1) * 2] & 0b01110000)>>4]);
+            myMAX7219_1.send(MAXAddress1[0], NumeralCode1[AlarmU[(selectedAlarm - 1) * 2] & 0b00001111]);
+            myMAX7219_1.send(MAXAddress1[4], (AlarmU[(selectedAlarm - 1) * 2] & 0b10000000)>>4); // Alarm Activated indicator on ddot
+            myMAX7219_2.send(MAXAddress2[4], 0);
             if(!confirmDelete){
-              myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
-              myMAX7219_2.send(3, chiffres[selectedAlarm % 10]);
-              myMAX7219_2.send(2, 0b00000001);
-              myMAX7219_2.send(1, chiffres[1]); // 1 = Unique alarm
+              myMAX7219_2.send(MAXAddress2[3], NumeralCode2[selectedAlarm / 10]);
+              myMAX7219_2.send(MAXAddress2[2], NumeralCode2[selectedAlarm % 10]);
+              myMAX7219_2.send(MAXAddress2[1], 0b00001000); // -
+              myMAX7219_2.send(MAXAddress2[0], NumeralCode2[1]); // 1 = Unique alarm
             }
             else{
-              myMAX7219_2.send(4, 0b01011011);
-              myMAX7219_2.send(3, 0b00111110);
-              myMAX7219_2.send(2, 0b01100111);
-              myMAX7219_2.send(1, 0b00000001);
+              myMAX7219_2.send(MAXAddress2[3], 0b10101101); // S
+              myMAX7219_2.send(MAXAddress2[2], 0b10110011); // U
+              myMAX7219_2.send(MAXAddress2[1], 0b10011110); // P
+              myMAX7219_2.send(MAXAddress2[0], 0b00001000); // -
             }
           }
           else{
             alarmIsNew = true;
-            myMAX7219_1.send(4, 0b00000001);
-            myMAX7219_1.send(3, 0);
-            myMAX7219_1.send(2, 0);
-            myMAX7219_1.send(1, 0);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(4, chiffres[selectedAlarm / 10]);
-            myMAX7219_2.send(3, chiffres[selectedAlarm % 10]);
-            myMAX7219_2.send(2, 0b00000001);
-            myMAX7219_2.send(1, chiffres[1]);
-            myMAX7219_2.send(5, 0);
+            myMAX7219_1.send(MAXAddress1[3], 0b00001000); // -
+            myMAX7219_1.send(MAXAddress1[2], 0);
+            myMAX7219_1.send(MAXAddress1[1], 0);
+            myMAX7219_1.send(MAXAddress1[0], 0);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[3], NumeralCode2[selectedAlarm / 10]);
+            myMAX7219_2.send(MAXAddress2[2], NumeralCode2[selectedAlarm % 10]);
+            myMAX7219_2.send(MAXAddress2[1], 0b00001000); // -
+            myMAX7219_2.send(MAXAddress2[0], NumeralCode2[1]); // 1 = Unique alarm
+            myMAX7219_2.send(MAXAddress2[4], 0);
           }
         }
       }
@@ -1034,77 +1065,77 @@ void loop() { //-------------------------------------------------loop
 
       switch(selected){
         case 0:{ // heure
-          myMAX7219_1.send(4, chiffres[(isSetting & 0b00110000)>>4]);
-          myMAX7219_1.send(3, chiffres[isSetting & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(isSetting & 0b00110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[2], NumeralCode1[isSetting & 0b00001111]);
           if(setupIsBlinking){
-            myMAX7219_1.send(2, chiffres[(newTimeData[0] & 0b01110000)>>4]);
-            myMAX7219_1.send(1, chiffres[newTimeData[0] & 0b00001111]);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(4, 0);
-            myMAX7219_2.send(3, 0);
-            myMAX7219_2.send(2, 0);
-            myMAX7219_2.send(1, 0);
-            myMAX7219_2.send(5, newTimeData[2]);
+            myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(newTimeData[0] & 0b01110000)>>4]);
+            myMAX7219_1.send(MAXAddress1[0], NumeralCode1[newTimeData[0] & 0b00001111]);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[3], 0);
+            myMAX7219_2.send(MAXAddress2[2], 0);
+            myMAX7219_2.send(MAXAddress2[1], 0);
+            myMAX7219_2.send(MAXAddress2[0], 0);
+            myMAX7219_2.send(MAXAddress2[4], dayLedsCompute(newTimeData[2]));
           }
           else{
-            myMAX7219_1.send(2, 0);
-            myMAX7219_1.send(1, 0);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(4, 0);
-            myMAX7219_2.send(3, 0);
-            myMAX7219_2.send(2, 0);
-            myMAX7219_2.send(1, 0);
-            myMAX7219_2.send(5, 0);
+            myMAX7219_1.send(MAXAddress1[1], 0);
+            myMAX7219_1.send(MAXAddress1[0], 0);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[3], 0);
+            myMAX7219_2.send(MAXAddress2[2], 0);
+            myMAX7219_2.send(MAXAddress2[1], 0);
+            myMAX7219_2.send(MAXAddress2[0], 0);
+            myMAX7219_2.send(MAXAddress2[4], 0);
           }
           break;
         }
         case 1:{ // minutes
-          myMAX7219_1.send(2, chiffres[(isSetting & 0b01110000)>>4]);
-          myMAX7219_1.send(1, chiffres[isSetting & 0b00001111]);
+          myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(isSetting & 0b01110000)>>4]);
+          myMAX7219_1.send(MAXAddress1[0], NumeralCode1[isSetting & 0b00001111]);
           if(setupIsBlinking){
-            myMAX7219_1.send(4, chiffres[(newTimeData[1] & 0b00110000)>>4]);
-            myMAX7219_1.send(3, chiffres[newTimeData[1] & 0b00001111]);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(4, 0);
-            myMAX7219_2.send(3, 0);
-            myMAX7219_2.send(2, 0);
-            myMAX7219_2.send(1, 0);
-            myMAX7219_2.send(5, newTimeData[2]);
+            myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(newTimeData[1] & 0b00110000)>>4]);
+            myMAX7219_1.send(MAXAddress1[2], NumeralCode1[newTimeData[1] & 0b00001111]);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[3], 0);
+            myMAX7219_2.send(MAXAddress2[2], 0);
+            myMAX7219_2.send(MAXAddress2[1], 0);
+            myMAX7219_2.send(MAXAddress2[0], 0);
+            myMAX7219_2.send(MAXAddress2[4], dayLedsCompute(newTimeData[2]));
           }
           else{
-            myMAX7219_1.send(4, 0);
-            myMAX7219_1.send(3, 0);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(4, 0);
-            myMAX7219_2.send(3, 0);
-            myMAX7219_2.send(2, 0);
-            myMAX7219_2.send(1, 0);
-            myMAX7219_2.send(5, 0);
+            myMAX7219_1.send(MAXAddress1[3], 0);
+            myMAX7219_1.send(MAXAddress1[2], 0);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[3], 0);
+            myMAX7219_2.send(MAXAddress2[2], 0);
+            myMAX7219_2.send(MAXAddress2[1], 0);
+            myMAX7219_2.send(MAXAddress2[0], 0);
+            myMAX7219_2.send(MAXAddress2[4], 0);
           }
           break;
         }
         default:{ // jour de la semaine, pour les alarmes unique on a pas besoin de ça (test réalisé en amont)
-            myMAX7219_2.send(4, chiffres[selected - 1]);
-            myMAX7219_2.send(5, isSetting);
+            myMAX7219_2.send(MAXAddress2[3], NumeralCode2[selected - 1]);
+            myMAX7219_2.send(MAXAddress2[4], dayLedsCompute(isSetting));
           if(setupIsBlinking){
-            myMAX7219_1.send(4, chiffres[(newTimeData[1] & 0b00110000)>>4]);
-            myMAX7219_1.send(3, chiffres[newTimeData[1] & 0b00001111]);
-            myMAX7219_1.send(2, chiffres[(newTimeData[0] & 0b01110000)>>4]);
-            myMAX7219_1.send(1, chiffres[newTimeData[0] & 0b00001111]);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(3, 0);
-            myMAX7219_2.send(2, 0);
-            myMAX7219_2.send(1, 0);
+            myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(newTimeData[1] & 0b00110000)>>4]);
+            myMAX7219_1.send(MAXAddress1[2], NumeralCode1[newTimeData[1] & 0b00001111]);
+            myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(newTimeData[0] & 0b01110000)>>4]);
+            myMAX7219_1.send(MAXAddress1[0], NumeralCode1[newTimeData[0] & 0b00001111]);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[2], 0);
+            myMAX7219_2.send(MAXAddress2[1], 0);
+            myMAX7219_2.send(MAXAddress2[0], 0);
           }
           else{
-            myMAX7219_1.send(4, 0);
-            myMAX7219_1.send(3, 0);
-            myMAX7219_1.send(2, 0);
-            myMAX7219_1.send(1, 0);
-            myMAX7219_1.send(5, 0);
-            myMAX7219_2.send(3, 0);
-            myMAX7219_2.send(2, 0);
-            myMAX7219_2.send(1, 0);
+            myMAX7219_1.send(MAXAddress1[3], 0);
+            myMAX7219_1.send(MAXAddress1[2], 0);
+            myMAX7219_1.send(MAXAddress1[1], 0);
+            myMAX7219_1.send(MAXAddress1[0], 0);
+            myMAX7219_1.send(MAXAddress1[4], 0);
+            myMAX7219_2.send(MAXAddress2[2], 0);
+            myMAX7219_2.send(MAXAddress2[1], 0);
+            myMAX7219_2.send(MAXAddress2[0], 0);
           }
           break;
         }
@@ -1117,17 +1148,17 @@ void loop() { //-------------------------------------------------loop
     if(!isReset){
       if(!isAwake){
         PCICR = 0; // Deactivate interruptions
-        myMAX7219_1.send(4,0);  // Deactivate display during DFPlayer wake up
-        myMAX7219_1.send(3,0);
-        myMAX7219_1.send(2,0);
-        myMAX7219_1.send(1,0);
-        myMAX7219_1.send(5, 0);
+        myMAX7219_1.send(MAXAddress1[3], 0);  // Deactivate display during DFPlayer wake up
+        myMAX7219_1.send(MAXAddress1[2], 0);
+        myMAX7219_1.send(MAXAddress1[1], 0);
+        myMAX7219_1.send(MAXAddress1[0], 0);
+        myMAX7219_1.send(MAXAddress1[4], 0);
 
-        myMAX7219_2.send(4, 0);
-        myMAX7219_2.send(3, 0);
-        myMAX7219_2.send(2, 0);
-        myMAX7219_2.send(1, 0);
-        myMAX7219_2.send(5, 0);
+        myMAX7219_2.send(MAXAddress2[3], 0);
+        myMAX7219_2.send(MAXAddress2[2], 0);
+        myMAX7219_2.send(MAXAddress2[1], 0);
+        myMAX7219_2.send(MAXAddress2[0], 0);
+        myMAX7219_2.send(MAXAddress2[4], 0);
         DFPLAYER::wakeUp();
         alarmWakeUpTimer = now;
         isAwake = true;
@@ -1178,17 +1209,17 @@ void loop() { //-------------------------------------------------loop
 
       DS3231::readDisplayTime(displayTime);
       // Whole display is blinking, if setupIsBlinking is 0, the it sends 0 to every display = off
-      myMAX7219_1.send(4,setupIsBlinking * chiffres[(displayTime[1] & 0b00110000)>>4]);
-      myMAX7219_1.send(3,setupIsBlinking * chiffres[displayTime[1] & 0b00001111]);
-      myMAX7219_1.send(2,setupIsBlinking * chiffres[(displayTime[0] & 0b01110000)>>4]);
-      myMAX7219_1.send(1,setupIsBlinking * chiffres[displayTime[0] & 0b00001111]);
-      myMAX7219_1.send(5, setupIsBlinking<<6);
+      myMAX7219_1.send(MAXAddress1[3], setupIsBlinking * NumeralCode1[(displayTime[1] & 0b00110000)>>4]);
+      myMAX7219_1.send(MAXAddress1[2], setupIsBlinking * NumeralCode1[displayTime[1] & 0b00001111]);
+      myMAX7219_1.send(MAXAddress1[1], setupIsBlinking * NumeralCode1[(displayTime[0] & 0b01110000)>>4]);
+      myMAX7219_1.send(MAXAddress1[0], setupIsBlinking * NumeralCode1[displayTime[0] & 0b00001111]);
+      myMAX7219_1.send(MAXAddress1[4], setupIsBlinking<<3);
 
-      myMAX7219_2.send(4, setupIsBlinking * chiffres[(displayNextAlarm[1] & 0b00110000)>>4]);
-      myMAX7219_2.send(3, setupIsBlinking * chiffres[displayNextAlarm[1] & 0b00001111]);
-      myMAX7219_2.send(2, setupIsBlinking * chiffres[(displayNextAlarm[0] & 0b01110000)>>4]);
-      myMAX7219_2.send(1, setupIsBlinking * chiffres[displayNextAlarm[0] & 0b00001111]);
-      myMAX7219_2.send(5, setupIsBlinking * displayNextAlarm[2]);
+      myMAX7219_2.send(MAXAddress2[3], setupIsBlinking * NumeralCode2[(displayNextAlarm[1] & 0b00110000)>>4]);
+      myMAX7219_2.send(MAXAddress2[2], setupIsBlinking * NumeralCode2[displayNextAlarm[1] & 0b00001111]);
+      myMAX7219_2.send(MAXAddress2[1], setupIsBlinking * NumeralCode2[(displayNextAlarm[0] & 0b01110000)>>4]);
+      myMAX7219_2.send(MAXAddress2[0], setupIsBlinking * NumeralCode2[displayNextAlarm[0] & 0b00001111]);
+      myMAX7219_2.send(MAXAddress2[4], dayLedsCompute(setupIsBlinking * displayNextAlarm[2]));
     }
     delay(10);
   }
@@ -1231,6 +1262,17 @@ ISR(PCINT2_vect) {
   else if(digitalRead(btDroite)){
     mode = 2;
   }
+}
+
+uint8_t dayLedsCompute(const uint8_t inputBit){
+  return 
+    ((inputBit & 0b00000001) << 4) +
+    ((inputBit & 0b00000010) << 1) +
+    ((inputBit & 0b00000100) << 5) +
+    (inputBit & 0b00001000) +
+    ((inputBit & 0b00010000) >> 4) +
+    (inputBit & 0b00100000) +
+    ((inputBit & 0b01000000) >> 5);
 }
 
 

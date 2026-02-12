@@ -14,9 +14,6 @@ void DFPLAYER::begin(Stream* DFPport, uint8_t rx, uint8_t tx, uint8_t powerPin, 
   _powerPin = powerPin;
   _rx = rx;
   _tx = tx;
-  pinMode(_powerPin, OUTPUT);
-  pinMode(_rx, OUTPUT);
-  pinMode(_tx, OUTPUT);
   sendDFPCommand(0x3F);   // Initialise DFPlayer
   delay(15);
   volume(_volume);
@@ -66,14 +63,16 @@ void DFPLAYER::pause(){ // Pause the track
 }
 
 void DFPLAYER::toSleep(){ // Going to low power mode
-  digitalWrite(_powerPin, HIGH);
+  PORTB |= (1 << _powerPin); //!\ Works only if port B are used
+  //digitalWrite(_powerPin, HIGH);
   //_DFPport->stopListening(); // Doesn't work anymore with NeoSWSerial
   digitalWrite(_rx, LOW);
   digitalWrite(_tx, LOW);
 }
 
 void DFPLAYER::wakeUp(){ // Going to normal mode
-  digitalWrite(_powerPin, LOW);
+  PORTB &= ~(1 << _powerPin); //!\ Works only if port B are used
+  //digitalWrite(_powerPin, LOW);
   digitalWrite(_rx, HIGH);
   digitalWrite(_tx, HIGH);
   //_DFPport->listen(); // Doesn't work anymore with NeoSWSerial

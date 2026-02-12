@@ -1,15 +1,4 @@
 #include "MAX7219.h"
-/*
-|SEG|BIT|  binary  |
-| A | 6 |0b01000000|
-| B | 5 |0b00100000|
-| C | 4 |0b00010000|
-| D | 3 |0b00001000|
-| E | 2 |0b00000100|
-| F | 1 |0b00000010|
-| G | 0 |0b00000001|
-| DP| 7 |0b10000000|
-*/
 
 uint8_t MAX7219::_din = 0;
 uint8_t MAX7219::_clk = 0;
@@ -49,15 +38,15 @@ void MAX7219::send(uint8_t address, uint8_t data) {     // fonction d'écriture 
   digitalWrite(_cs, HIGH);
 }
 
-void MAX7219::init() {                                  // initialisation du MAX7219CNG
-  send(0x0F, 0x00); // Pas de test
+void MAX7219::init() {                                  // MAX7219CNG initialisation
+  send(0x0F, 0x00); // No test
   send(0x0C, 0x01); // Normal mode
-  send(0x0B, 0x04); // Scan limit digits 0-4
-  send(0x0A, 0x03); // Intensité moyenne
-  send(0x09, 0x00); // **Mode décodage désactivé**
+  send(0x0B, 0x07); // Scan all
+  send(0x0A, 0x03); // Medium brightness
+  send(0x09, 0x00); // Decode mode disabled
   
   // Éteindre tous les digits
-  for (uint8_t i = 1; i <= 4; i++) {
+  for (uint8_t i = 1; i <= 8; i++) {
     send(i, 0x00);
   }
 }
