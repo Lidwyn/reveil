@@ -1,13 +1,23 @@
 #ifndef DFPLAYER_H
 #define DFPLAYER_H
 
+#ifndef PB6_OUT() // Define the function for PB6, the power mosfet
+  #define PB6_OUT()   DDRB |= (1 << DDB6)
+#endif
+#ifndef PB6_HIGH()
+  #define PB6_HIGH()  PORTB |= (1 << PORTB6)
+#endif
+#ifndef PB6_LOW()
+  #define PB6_LOW()   PORTB &= ~(1 << PORTB6)
+#endif
+
 #include <Arduino.h> // Always include this!
 //#include <NeoSWSerial.h>
 
 class DFPLAYER {
   public:
     // Basic functions
-    static void begin(Stream* DFPport, uint8_t rx, uint8_t tx, uint8_t powerPin, Stream* serial); // Configure and initialise de DFPlayer
+    static void begin(Stream* DFPport, uint8_t rx, uint8_t tx, Stream* serial); // Configure and initialise de DFPlayer
     static void play(); // Play the track
     static void volume(uint8_t vol); // Volume
     static void pause(); // Pause the track

@@ -4,14 +4,12 @@ Stream* DFPLAYER::_serial = nullptr;    // Serial port for debug
 Stream* DFPLAYER::_DFPport = nullptr;   // Serial port for the DFPlayer
 uint8_t _rx;   // for sleep mode
 uint8_t _tx;   // for sleep mode
-uint8_t _powerPin; // for sleep mode
 uint8_t _volume = 15; // base volume
 
-void DFPLAYER::begin(Stream* DFPport, uint8_t rx, uint8_t tx, uint8_t powerPin, Stream* serial) {
+void DFPLAYER::begin(Stream* DFPport, uint8_t rx, uint8_t tx, Stream* serial) {
   _serial = serial;
   _serial->println("librairie DFPlayer");   // Checking the librairy is started
   _DFPport = DFPport;
-  _powerPin = powerPin;
   _rx = rx;
   _tx = tx;
   sendDFPCommand(0x3F);   // Initialise DFPlayer
@@ -63,7 +61,7 @@ void DFPLAYER::pause(){ // Pause the track
 }
 
 void DFPLAYER::toSleep(){ // Going to low power mode
-  PORTB |= (1 << _powerPin); //!\ Works only if port B are used
+  PB6_HIGH(); //!\ Works only if port B are used
   //digitalWrite(_powerPin, HIGH);
   //_DFPport->stopListening(); // Doesn't work anymore with NeoSWSerial
   digitalWrite(_rx, LOW);
@@ -71,7 +69,7 @@ void DFPLAYER::toSleep(){ // Going to low power mode
 }
 
 void DFPLAYER::wakeUp(){ // Going to normal mode
-  PORTB &= ~(1 << _powerPin); //!\ Works only if port B are used
+  PB6_LOW(); //!\ Works only if PB6 is used
   //digitalWrite(_powerPin, LOW);
   digitalWrite(_rx, HIGH);
   digitalWrite(_tx, HIGH);

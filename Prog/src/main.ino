@@ -17,6 +17,10 @@
 #include <AltSoftSerial.h>      // Necessary for DFPlayer
 #include "DFPlayer.h"         // DFPlayer
 
+#define PB6_OUT()   DDRB |= (1 << DDB6)
+#define PB6_HIGH()  PORTB |= (1 << PORTB6)
+#define PB6_LOW()   PORTB &= ~(1 << PORTB6)
+
 //partie interruption
 volatile bool RTCFlag = false;
 volatile bool RTCLastPinState = LOW;
@@ -158,8 +162,8 @@ void setup() { //-------------------------------------------------setup
   //Audio
   pinMode(DFPrx, OUTPUT);
   pinMode(DFPtx, OUTPUT);
-  DDRB |= (1 << DDB6); // Same as pinMode(DFPpower, OUTPUT);
-  PORTB |= (1 << PORTB6); // Same as digitalWrite(DFPpower, LOW);
+  PB6_LOW();
+  PB6_OUT(); // Same as digitalWrite(DFPpower, LOW);
   // Turning the DFPlayer on for setup (low = on --> mosfet P-channel)
   // 1 sec delay necessary after this, so the rest of the setup is found at the end 
   //Sleep_mode init
@@ -346,7 +350,7 @@ void setup() { //-------------------------------------------------setup
     delay(50);
   }
   DFPlayerPort.begin(9600);
-  DFPLAYER::begin(&DFPlayerPort, DFPrx, DFPtx, PORTB6, &Serial);
+  DFPLAYER::begin(&DFPlayerPort, DFPrx, DFPtx, &Serial);
   delay(50);
   DFPLAYER::toSleep();
   //Turning of the display

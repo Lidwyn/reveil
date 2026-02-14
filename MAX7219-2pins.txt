@@ -1,0 +1,14 @@
+           +----_----+
+     DIN  1 |DIN  DOUT| 24
+     CC1  2 |D_0   S_D| 23 G/4
+     CC2  3 |D_4  S_DP| 22 F/3
+     GND  4 |GND   S_E| 21 A/2
+     CC3  5 |D_6   S_C| 20 B/1
+     CC4  6 |D_2   VCC| 19 VCC
+     CCL  7 |D_3  ISET| 18 ISET
+          8 |D_7   S_G| 17 C/5
+     GND  9 |GND   S_B| 16 D/6
+         10 |D_5   S_F| 15 E/7
+         11 |D_1   S_A| 14
+    LOAD 12 |LOAD  CLK| 13 CLK
+            +---------+
