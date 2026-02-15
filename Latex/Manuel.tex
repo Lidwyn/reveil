@@ -244,28 +244,104 @@ Pour revenir au premier page, il faut appuyer sur le bouton gauche lorsque les j
         \annotatedFigureBox{.344}{.08}{.288}{.833}{K}{1}[red]
         \annotatedFigureBox{.661}{.115}{.311}{.4}{L}{8}[red]
         \annotatedFigureBox{.651}{.065}{.321}{.05}{M}{8}[red]
+        \annotatedFigureBox{.89}{.6}{.082}{.25}{N}{1}[red]
     \end{annotatedFigure}
     \caption{Affichage 2}
     \label{affichage 2 reglage}
 \end{figure}
 
+Ceci fait, on peut sortir du monde de réglage de l'heure en appuyant sur le bouton setup \circled{\textbf{N}}.
+
+\section{Alarmes}
+
+\subsection{Les deux types d'alarmes}
+
+On peut enregister jusqu'à 30 alarmes. Il y a deux catégories d'alarmes:
+\begin{enumerate}
+    \item Les alarmes permanantes : sonne selon une période hebdommadaire.
+    \item Les alarmes éphémmères : ne sonne qu'une seule fois puis se désarme.
+\end{enumerate}
+
+Il y a donc jusqu'à 15 de chaque et les deux types on leur page respective dans menu des réveils.
+
+\subsection{Lorsque l'alarme sonne}
+
+Lorsqu'une alarme sonne, on a un signal sonore modifiable sur la carte microSD avec un fichier mp3.
+L'affichage se met à cligonter. Pour couper l'alarme, il suffit d'appuyer sur le bouton large sur le dessus du  réveil.
+
+Si il s'agit d'une alarme éphémmère, elle se désactive automatiquement.
+
 \clearpage  %______________________________/!\_clearpage_/!\_____________________________
 
-\section{Selections d'une alarme}
+\subsection{Menu des alarmes}
 
 Les alarmes ont un menu associés qui permet :
 
 \begin{itemize}
     \item L'activation ou la désactivation des alarmes
     \item La création de nouvelles alarmes
-    \item La modification de l'alarmes existantes
+    \item La modification ou la suppression d'alarmes existantes
 \end{itemize}
 
-Ce menu est accèssible en appuyant sur le bouton droite.
+Ce menu est accèssible en appuyant sur le bouton droite \circled{\textbf{A}}.
 
-\subsection{fonctionnement des alarmes enregistrées}
+\begin{figure}[h!]
+    \centering
+    \begin{annotatedFigure}
+        {\includegraphics[width = .9\textwidth]{reveil.png}}
+        \annotatedFigureBox{.79}{.6}{.082}{.25}{A}{2}[red]
+    \end{annotatedFigure}
+    \caption{Entrer dans le menu des réveils}
+    \label{affichage 2 reglage}
+\end{figure}
+
+Lorsque l'on entre de le menu des alarmes, on arrive sur le sous menu lié au alarmes hebdommadaire,
+sur la prermière alarme, qui peut être inexistante et dans ce cas on nous proposer de la créer
+(voir section "Création d'une nouvelle alarme").
+\clearpage  %______________________________/!\_clearpage_/!\_____________________________
+Sur l'affichage du menu des alarmes on retrouve c'est information :
+
+\begin{figure}[h!]
+    \centering
+    \begin{annotatedFigure}
+        {\includegraphics[width = .9\textwidth]{reveil.png}}
+        \annotatedFigureBox{.026}{.08}{.608}{.833}{A}{5}[red]
+        \annotatedFigureBox{.661}{.115}{.308}{.408}{B}{4}[red]
+        \annotatedFigureBox{.651}{.065}{.321}{.05}{C}{8}[red]
+        \annotatedFigureBox{.313}{.15}{.034}{.703}{D}{6}[red]
+    \end{annotatedFigure}
+    \caption{Affichage du menu des alarmes}
+    \label{affichage 2 reglage}
+\end{figure}
+
+\begin{itemize}
+    \item L'heure à laquelle sonne l'alarme \circled{\textbf{A}}
+    \item Le numéro de l'alarme \circled{\textbf{B}} (de 1 à 15)
+    \item les jours de la semaine auxquels l'alarme sonne \circled{\textbf{C}} (lundi à gauche jusque
+    dimanche à droite). Si toute les leds sont désactivées, alors il s'agit du menu pour les alarmes éphémmères
+    \item État armé ou non de l'alarme, allumé = armé
+\end{itemize}
 
 \subsection{Création d'une nouvelle alarme}
 
+Lorsque le l'affichage n'affiche qu'un tiret sur l'écran de gauche, cela veut dire qu'il n'y pas plus
+d'alarme éxistantes et donc que l'on peut en créer une nouvelle. pour se faire on clique sur le bouton
+setup pour entrer dans le mode modification/création d'une nouvelle alarme. l'heure de base est réglée sur 12h00.
+
+Ce menu de mofification de l'alarme est très similaire à celui pour régler l'heure actuelle, pour les paramètres
+de l'heure de l'alarme et des minutes. Ensuite on peut modifier les jours de la semaines, pour se faire,
+lorsque l'on clique sur le bouton droite alors que l'on est sur les minutes, on a un chiffres qui
+s'affiche sur le deuxième écran correspondant au jour de la semaine (1 = lundi jusqu'à 7 = dimanche).
+Pour activer un jour on clique sur le bouton plus et pour le désactiver sur le bouton moins.
+
 \subsection{Modification d'une alarme existante}
+
+Pour modifier une alarme existante, lorsqu'elle est affichée dans le menu réveil, on appui sur le bouton setup.
+Une fois que c'est fait on a le même menu de modification que pour la création.
+
+\section{Réglage de l'affichage}
+
+On peut régler l'intensité de l'affichage avec les boutons plus et moins.
+Et on peut inihiber l'affichage avec le bouton sur le dessus du réveil.
+
 \end{document}
