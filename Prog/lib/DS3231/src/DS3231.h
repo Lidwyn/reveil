@@ -9,7 +9,6 @@ class DS3231 {
     static void begin(const uint8_t addr, const bool wireBegan, Stream* serial);              // Méthode d'initialisation
     static bool hasbegun();
     static void readDisplayTime(uint8_t* buffer);
-    static void readAlarmCheck(uint8_t* buffer);
     static void readFullDate(uint8_t* buffer);
     static void setupFullDateRead(uint8_t* buffer);
     static void write1byte(const uint8_t Register, const uint8_t data);

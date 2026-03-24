@@ -5,9 +5,10 @@ bool DS3231::boolhasbegun = false;
 Stream* DS3231::_serial = nullptr;
 
 void DS3231::begin(const uint8_t addr, const bool wireBegan, Stream* serial) {
+  _serial->println("DS3231 library");
   address = addr;
   _serial = serial;
-  _serial->println("librairie DS3231");
+  write1byte(0x0E, 0); // This register might reset when corrupted, so I set it every initialisation
   if(!wireBegan){
     Wire.begin();
   }
@@ -18,43 +19,27 @@ bool DS3231::hasbegun() {
   return boolhasbegun;
 }
 
-//----------------------------------------------------------Lecture
+//----------------------------------------------------------Reading
 
 void DS3231::readDisplayTime(uint8_t* buffer) {
-  Wire.beginTransmission(address);
-  Wire.write(0x01);
-  Wire.endTransmission();
-  uint8_t nbRead = 2;
-  Wire.requestFrom(address, nbRead);
-  int i = 0;
-  while (Wire.available() && i < nbRead) {
-    buffer[i++] = Wire.read();
-  }
-}
-
-void DS3231::readAlarmCheck(uint8_t* buffer) {
-  Wire.beginTransmission(address);
-  Wire.write(0x01);
-  Wire.endTransmission();
-  uint8_t nbRead = 6;
-  Wire.requestFrom(address, nbRead);
-  int i = 0;
-  while (Wire.available() && i < 4) {
-    buffer[i++] = Wire.read();
-  }
-  if(Wire.available()){
-    Wire.read();
-  }
-  while (Wire.available() && i < nbRead) {
-    buffer[i++] = Wire.read();
-  }
+  // Read minute (reg01) and hour (reg02) and write them in the pointer buffer 
+  Wire.beginTransmission(address);          // ╗
+  Wire.write(0x01);                         // ║
+  Wire.endTransmission();                   // ║
+  uint8_t nbRead = 2;                       // ║
+  Wire.requestFrom(address, nbRead);        // ║> Classic I2C reading
+  int i = 0;                                // ║
+  while (Wire.available() && i < nbRead) {  // ║
+    buffer[i++] = Wire.read();              // ║
+  }                                         // ╝
 }
 
 void DS3231::readFullDate(uint8_t* buffer) {
+  // Read full date (except second) and write them in the pointer buffer
   Wire.beginTransmission(address);
   Wire.write(0x01);
   Wire.endTransmission();
-  uint8_t nbRead = 6;
+  uint8_t nbRead = 6; // It should work with only 3 for minutes, hour and day
   Wire.requestFrom(address, nbRead);
   int i = 0;
   while (Wire.available() && i < nbRead) {
@@ -63,6 +48,7 @@ void DS3231::readFullDate(uint8_t* buffer) {
 }
 
 void DS3231::setupFullDateRead(uint8_t* buffer) {
+  // Read full date (with second) and write them in the pointer buffer for the setup mode
   Wire.beginTransmission(address);
   Wire.write(0x00);
   Wire.endTransmission();
@@ -75,9 +61,10 @@ void DS3231::setupFullDateRead(uint8_t* buffer) {
 }
 
 
-//----------------------------------------------------------Ecriture
+//----------------------------------------------------------Writing
 
 void DS3231::write1byte(const uint8_t Register, const uint8_t data) {
+  // Generic 1 register writing function
   Wire.beginTransmission(address);
   Wire.write(Register);
   Wire.write(data);
@@ -85,6 +72,7 @@ void DS3231::write1byte(const uint8_t Register, const uint8_t data) {
 }
 
 void DS3231::writeMbyte(const uint8_t FirstRegister, const uint8_t* data, const uint8_t nbBytes) {
+  // Generic multiple registers writing function
   Wire.beginTransmission(address);
   Wire.write(FirstRegister);
   for(uint8_t i = 0; i < nbBytes; i++){
@@ -93,6 +81,7 @@ void DS3231::writeMbyte(const uint8_t FirstRegister, const uint8_t* data, const 
   Wire.endTransmission();
 }
 
+// Generic specific register writing, not used but good to have
 void DS3231::writeSec(const uint8_t second){
   write1byte(0x00, second);
 }

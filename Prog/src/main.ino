@@ -221,7 +221,7 @@ void setup() { //-------------------------------------------------setup
   sei();  // Active les interruption globale
 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  if(true){ // bus I2C debug
+  if(false){ // bus I2C debug
     //write eeprom
     /*
     Wire.beginTransmission(AT24C32addr);
@@ -306,19 +306,12 @@ void setup() { //-------------------------------------------------setup
     /*
     //write DS3231
     Wire.beginTransmission(DS3231addr);
-    Wire.write(0x00);
-    /*
+    Wire.write(0x0E);
     Wire.write(0);
-    Wire.write((1 << 4) | (4));
-    Wire.write((2 << 4) | (3));
-    Wire.write(7);
-    Wire.write((2 << 4) | (7));
-    Wire.write((0 << 4) | (9));
-    Wire.write((2 << 4) | (5));
     Wire.endTransmission();
-    */
+    
 
-    /*
+    
     //read DS3231
     Serial.println("--- read DS3231 ---");
     uint8_t k = 0;
