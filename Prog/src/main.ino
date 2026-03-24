@@ -70,7 +70,7 @@ bool UDHysteresis = false; // Variable permettant la mise en place d'un cycle d'
 // réutilisation de newTimeData, isSetting et selected
 // réutilisation de lastBlink, setupIsBlinking et blinkTime
 
-//timing (a retirer lors du passage sur interruption)
+//timing
 unsigned long lastSecond = 0;
 uint8_t lastMinute = 61;
 const unsigned long secondInterval = 1000;
@@ -134,17 +134,17 @@ const uint8_t MAXAddress2[5] = {
   0x04  // leds = DIG3
 };
 
-//PIN des bouton
-uint8_t btPlus = 5;         // bouton + sur D5 / PIN 11 / PCINT21
-bool btPlusLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
-uint8_t btMoins = 7;        // bouton - sur D7 / PIN 13 / PCINT23
-bool btMoinsLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
-uint8_t btSetup = 3;        // bouton setup sur D3 / PIN 5 / PCINT19
-uint8_t btA = 4;            // bouton au dessus du reveil sur D4 / PIN 6 / PCINT20
-uint8_t btGauche = 2;       // bouton gauche sur D2 / PIN 4 / PCINT18
-bool btGaucheLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
-uint8_t btDroite = 6;       // bouton droite sur D6 / PIN 12 / PCINT22
-bool btDroiteLastState = false; // Enregistre la derniere valeur du bouton pour une meilleur fluidite dans l utilisation dans le mode setup/reveil.
+// Buttons PIN
+uint8_t btPlus = 5;         // + button on D5 / PIN 11 / PCINT21
+bool btPlusLastState = false; // Save the last value of the button for better fluidity in setup/alarm modes
+uint8_t btMoins = 7;        // - button on D7 / PIN 13 / PCINT23
+bool btMoinsLastState = false; // Save the last value of the button for better fluidity in setup/alarm modes
+uint8_t btSetup = 3;        // Setup button on D3 / PIN 5 / PCINT19
+uint8_t btA = 4;            // Top button on D4 / PIN 6 / PCINT20
+uint8_t btGauche = 2;       // Left button on D2 / PIN 4 / PCINT18
+bool btGaucheLastState = false; // Save the last value of the button for better fluidity in setup/alarm modes
+uint8_t btDroite = 6;       // Right Button on D6 / PIN 12 / PCINT22
+bool btDroiteLastState = false; // Save the last value of the button for better fluidity in setup/alarm modes
 
 //Audio
 const uint8_t DFPrx = 8; // to TX
@@ -158,7 +158,9 @@ const unsigned long wakeUpTime = 900; // From testing, 900 ms was the smallest a
 // réutilisation de lastBlink, setupIsBlinking et blinkTime
 
 void setup() { //-------------------------------------------------setup
-  
+  unsigned long setupTimer = millis(); // Setup duration and for DFPlayer setup timer
+  Serial.begin(9600); // Debug serial port at 9600 bauds
+
   //Audio
   pinMode(DFPrx, OUTPUT);
   pinMode(DFPtx, OUTPUT);
@@ -166,20 +168,19 @@ void setup() { //-------------------------------------------------setup
   PB6_OUT(); // Same as digitalWrite(DFPpower, LOW);
   // Turning the DFPlayer on for setup (low = on --> mosfet P-channel)
   // 1 sec delay necessary after this, so the rest of the setup is found at the end 
-  //Sleep_mode init
-
-  double setupTimer = millis(); // Setup duration and for DFPlayer setup timer
-  Serial.begin(9600); // Debug serial port at 9600 bauds
+  
   for(uint8_t i = 0; i < 20; i++){ 
     Serial.println(); //serial clear
   }
   Serial.println("Hello from ATmega328P !");
-
   //Display init
   MAX7219::begin(13, 10, &Serial);
   myMAX7219_1.init();
   myMAX7219_2.init();
 
+  
+  Serial.println("test 3");
+  delay(200);
   //Turning the display on while setup
   myMAX7219_1.send(MAXAddress1[0], 0xff);  // Turning on all the led for every 7-seg
   myMAX7219_1.send(MAXAddress1[1], 0xff);
@@ -198,27 +199,27 @@ void setup() { //-------------------------------------------------setup
   DS3231::begin(DS3231addr, true, &Serial);
   AT24C32::begin(AT24C32addr, true, &Serial);
 
-  //Interruption clock (1hz donc deux interruption par seconde -> passage 0-1 et 1-0)
-  pinMode(A3, INPUT);         // Entrée de la clock du DS3131 sur A3 (PC3)
-  PCICR |= (1 << PCIE1);      // Active les interruption sur PCINT[14:8] --> PC0 à PC5 / A0 à A5
-  PCMSK1 |= (1 << PCINT11);   // Active PCINT11 --> PC3 / A3
+  //Interruption clock (1hz so two interruption per second -> passage 0-1 et 1-0)
+  pinMode(A3, INPUT);         // DS3131 clock input on A3 (PC3)
+  PCICR |= (1 << PCIE1);      // Activing interruptions on PCINT[14:8] --> PC0 to PC5 / A0 to A5
+  PCMSK1 |= (1 << PCINT11);   // Activing interruption specifically on PCINT11 --> PC3 / A3
   
   //Interruption boutons
-  PCICR |= (1 << PCIE2);      // Active les interruptions PCINT[16:23] --> PD0 à PD7 / D0 à D7
+  PCICR |= (1 << PCIE2);      // Activing interruptions on PCINT[16:23] --> PD0 to PD7 / D0 to D7
 
-  pinMode(btPlus, INPUT);     // pinMode bouton
-  PCMSK2 |= (1 << PCINT21);   // Active l'interruption
+  pinMode(btPlus, INPUT);     // pinMode button
+  PCMSK2 |= (1 << PCINT21);   // Activing interruption
   pinMode(btMoins, INPUT);
   PCMSK2 |= (1 << PCINT23);
   pinMode(btSetup, INPUT);
   PCMSK2 |= (1 << PCINT19);
   pinMode(btA, INPUT);
   PCMSK2 |= (1 << PCINT20);
-  pinMode(btGauche, INPUT);   // Pas d'interruption sur le bouton gauche
+  pinMode(btGauche, INPUT);   // No interruption on left button -> can upgrade the device through this button
   pinMode(btDroite, INPUT);
   PCMSK2 |= (1 << PCINT22);
   
-  sei();  // Active les interruption globale
+  sei();  // Activing interruptions globaly
 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   if(false){ // bus I2C debug

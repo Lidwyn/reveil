@@ -10,6 +10,7 @@ MAX7219::MAX7219(uint8_t cs) : _cs(cs) {                // constructeur avec un 
 }
 
 void MAX7219::begin(uint8_t din, uint8_t clk, Stream* serial) {         // configure DIN/CLK partagés
+  _serial = serial;
   MAX7219::_din = din;
   MAX7219::_clk = clk;
   pinMode(_din, OUTPUT);
@@ -18,6 +19,7 @@ void MAX7219::begin(uint8_t din, uint8_t clk, Stream* serial) {         // confi
   digitalWrite(_din, LOW);
   _serial = serial;
   _serial->println("librairie MAX7219");
+  delay(15);
 }
 
 void MAX7219::spi_write(uint8_t data) {                 // gestion de l'écriture bit par bit dans le SPI

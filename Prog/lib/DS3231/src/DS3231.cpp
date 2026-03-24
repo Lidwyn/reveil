@@ -5,7 +5,6 @@ bool DS3231::boolhasbegun = false;
 Stream* DS3231::_serial = nullptr;
 
 void DS3231::begin(const uint8_t addr, const bool wireBegan, Stream* serial) {
-  _serial->println("DS3231 library");
   address = addr;
   _serial = serial;
   write1byte(0x0E, 0); // This register might reset when corrupted, so I set it every initialisation
@@ -13,6 +12,7 @@ void DS3231::begin(const uint8_t addr, const bool wireBegan, Stream* serial) {
     Wire.begin();
   }
   boolhasbegun = true;
+  _serial->println("DS3231 library");
 }
 
 bool DS3231::hasbegun() {
