@@ -388,31 +388,15 @@ void loop() { //-------------------------------------------------loop
     if(RTCFlag){
       //double loopTimer = millis(); // calcul du temps
       RTCFlag = false;
+      DS3231::readDisplayTime(displayTime); // getting new time to display and later detect alarm even in night mode
       if(!nightMode){
-        //display time
-        DS3231::readDisplayTime(displayTime);
-        
+        //display time        
         myMAX7219_1.send(MAXAddress1[3], NumeralCode1[(displayTime[1] & 0b00110000)>>4]);
         myMAX7219_1.send(MAXAddress1[2], NumeralCode1[displayTime[1] & 0b00001111]);
         myMAX7219_1.send(MAXAddress1[1], NumeralCode1[(displayTime[0] & 0b01110000)>>4]);
         myMAX7219_1.send(MAXAddress1[0], NumeralCode1[displayTime[0] & 0b00001111]);
         myMAX7219_1.send(MAXAddress1[4], ddot<<3);
         ddot = !ddot;
-
-        if (lastMinute != computeValue(displayTime[0])){
-          /*Serial.println("new minute");*/
-          lastMinute = computeValue(displayTime[0]);
-          DS3231::readFullDate(timeData);
-          if(nbActive != 0){
-            AlarmIsActive = checkAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f);
-            if(AlarmIsActive){
-              Serial.println("!----------------------!");
-              Serial.println("    Alarme detectee");
-              Serial.println("!----------------------!");
-              mode = 3; // Going in mode 3 : ringing mode
-            }
-          }
-        }
 
         if(refreshNextAlarmDislpay){
           if(nbActive != 0){
@@ -445,6 +429,23 @@ void loop() { //-------------------------------------------------loop
         myMAX7219_2.send(MAXAddress2[3], 0);
         myMAX7219_2.send(MAXAddress2[4], 0);
       }
+
+      if (lastMinute != computeValue(displayTime[0])){ // If new min we check if there is a new alarm
+        /*Serial.println("new minute");*/
+        lastMinute = computeValue(displayTime[0]);
+        if(nbActive != 0){ // We check only if there are some alarms active
+          DS3231::readFullDate(timeData);
+          AlarmIsActive = checkAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f);
+          if(AlarmIsActive){
+            Serial.println("!----------------------!");
+            Serial.println("    Alarme detectee");
+            Serial.println("!----------------------!");
+            mode = 3; // Going in mode 3 : ringing mode
+          }
+        }
+        // We could use something similar to displayNextAlarm[] to simplify things, it work like that so it's not a priority
+      }
+      
       delay(10);
     }
     
@@ -1182,7 +1183,8 @@ void loop() { //-------------------------------------------------loop
         isAwake = false; // Reset the alarm mode variables
         isReset = false;
         
-        AlarmIsActive = false; // alarm isn't active anymore // may be unnecessary
+        AlarmIsActive = false; // Alarm isn't active anymore // may be unnecessary
+        nightMode = false; // Stopping nightmode if in nightmode (no changes otherwise)
         mode = 0;
 
         // Check new next alarm
