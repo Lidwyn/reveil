@@ -63,17 +63,15 @@ void DFPLAYER::pause(){ // Pause the track
 void DFPLAYER::toSleep(){ // Going to low power mode
   PB6_HIGH(); //!\ Works only if port B are used
   //digitalWrite(_powerPin, HIGH);
-  //_DFPport->stopListening(); // Doesn't work anymore with NeoSWSerial
   digitalWrite(_rx, LOW);
   digitalWrite(_tx, LOW);
 }
 
 void DFPLAYER::wakeUp(){ // Going to normal mode
-  PB6_LOW(); //!\ Works only if PB6 is used
-  //digitalWrite(_powerPin, LOW);
   digitalWrite(_rx, HIGH);
   digitalWrite(_tx, HIGH);
-  //_DFPport->listen(); // Doesn't work anymore with NeoSWSerial
+  PB6_LOW(); //!\ Works only if PB6 is used
+  //digitalWrite(_powerPin, LOW);
   //_serial->println("must call DFPLAYER::wakeUpReset() in 0.9 seconds");
 }
 

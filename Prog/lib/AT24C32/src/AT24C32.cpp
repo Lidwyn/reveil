@@ -317,18 +317,21 @@ void AT24C32::modifyNU(uint8_t nb, uint8_t* buffer){
 }
 
 void AT24C32::modifyU(uint8_t nb, uint8_t* buffer){
+  //_serial->println("modifyU");
+  //_serial->println(nb);
+  //_serial->println(buffer[0], BIN);
   uint8_t pos = 16;
   //check first place
   uint8_t nbRead = RegBytes/2;
   uint8_t readReg[nbRead];
   Wire.beginTransmission(address);
-  Wire.write(0x00); //adresse haute
-  Wire.write(RegBytes/2); //adresse basse
+  Wire.write(0x00); // Higher address
+  Wire.write(RegBytes/2); // Lower address
   Wire.endTransmission();
   Wire.requestFrom(address, nbRead);
   uint8_t i = 0;
 
-  while (Wire.available() && i < nbRead) {
+  while (Wire.available() && i < nbRead) {  // Reading the position registers (starting at RegBytes/2 for Unique)
     readReg[i++] = Wire.read();
   }
 
@@ -336,21 +339,22 @@ void AT24C32::modifyU(uint8_t nb, uint8_t* buffer){
   i = 0;
   uint8_t j = 0;
   while(notfound && (i < nbRead)){
-    uint8_t b = (readReg[i] & 0b01010101);
-    while (b && notfound) {
-      uint8_t bit = __builtin_ctz(b) / 2;
-      pos = i * 4 + bit;
-      b &= b - 1;
-      if(j == nb){
-        notfound = false;
-        Wire.beginTransmission(address);
+    uint8_t b = (readReg[i] & 0b01010101); // b = actual working byte
+    while (b && notfound) { // We are removing the last bit at 1 from b to get test and get position
+      uint8_t bit = __builtin_ctz(b); // Getting position of last bit at 1 in b
+      pos = i * 4 + bit / 2; // Adjusting pos for address in memory (4 place per i + actual place bit/2)
+      b &= b - 1; // Removing last bit at 1 in b
+      if(j == nb){ // We test if it's the one we are looking for
+        notfound = false; // We found it
+        Wire.beginTransmission(address);  // We now write the new value of buffer
         Wire.write(0x00);
         Wire.write(i + RegBytes /2);
-        if(buffer[0] & 0b10000000){ // Changing reg depending on Active state
-          Wire.write(readReg[i] | 0b11<<(pos*2));
+        // Changing reg depending on Active state
+        if(buffer[0] & 0b10000000){ // Active
+          Wire.write(readReg[i] | 0b11<<(bit)); // Add 11 shifted of bit
         }
         else{
-          Wire.write(readReg[i] & ~(0b10<<(pos*2)));
+          Wire.write(readReg[i] & ~(0b10<<(bit))); // &~ --> change the bit where it was 1 (turn off in the reg)
         }
         Wire.endTransmission();
       }
@@ -360,7 +364,7 @@ void AT24C32::modifyU(uint8_t nb, uint8_t* buffer){
   }
 
   delay(100); // This delay is very important, if it's not here, what comes after won't work
-  Wire.beginTransmission(address);
+  Wire.beginTransmission(address); // Now that we found the right position in the memory, we change it
   Wire.write(0x00);
   Wire.write(UBytes + (pos * 2));
   Wire.write(buffer[0]);

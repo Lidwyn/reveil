@@ -178,8 +178,7 @@ void setup() { //-------------------------------------------------setup
   myMAX7219_1.init();
   myMAX7219_2.init();
 
-  
-  Serial.println("test 3");
+
   delay(200);
   //Turning the display on while setup
   myMAX7219_1.send(MAXAddress1[0], 0xff);  // Turning on all the led for every 7-seg
@@ -222,7 +221,7 @@ void setup() { //-------------------------------------------------setup
   sei();  // Activing interruptions globaly
 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  if(false){ // bus I2C debug
+  if(false){ // I2C bus debug
     //write eeprom
     /*
     Wire.beginTransmission(AT24C32addr);
@@ -440,6 +439,7 @@ void loop() { //-------------------------------------------------loop
             Serial.println("!----------------------!");
             Serial.println("    Alarme detectee");
             Serial.println("!----------------------!");
+            delay(200);
             mode = 3; // Going in mode 3 : ringing mode
           }
         }
@@ -768,14 +768,13 @@ void loop() { //-------------------------------------------------loop
           btGaucheLastState = false;
         }
       }
-      else if(setupRight || btDroiteLastState){
-        if(!btDroiteLastState){
-          btDroiteLastState = true;
+      else if(setupRight || btDroiteLastState){ // Right click in alarm menu
+        if(!btDroiteLastState){ // Multi click protection
+          btDroiteLastState = true; // Multi click protection
           uint8_t maxSelectedAlarm = selectedType ? nbAlarm & 0b00001111 : nbAlarm >> 4;
           if(selectedAlarm != 0){
-            if(selectedAlarm < maxSelectedAlarm + 1){
-              //activer, désactiver
-              if(!selectedType){
+            if(selectedAlarm < maxSelectedAlarm + 1){ // Activating or Deactivating alarm in alarm menu
+              if(!selectedType){ // For Non Unique alarms
                 AlarmNU[(selectedAlarm - 1) * 3] ^= 0b10000000;
                 uint8_t buffer[3];
                 for(uint8_t i = 0; i < 3; i++){
@@ -783,7 +782,7 @@ void loop() { //-------------------------------------------------loop
                 }
                 AT24C32::modifyNU(selectedAlarm - 1, buffer);
               }
-              else{
+              else{ // For Unique alarms
                 AlarmU[(selectedAlarm - 1) * 2] ^= 0b10000000;
                 uint8_t buffer[2];
                 for(uint8_t i = 0; i < 2; i++){
@@ -792,7 +791,6 @@ void loop() { //-------------------------------------------------loop
                 AT24C32::modifyU(selectedAlarm - 1, buffer);
               }
               delay(20);
-              //nbAlarm = AT24C32::readAll(AlarmNU, AlarmU);
             }
           }
           else{ // Escape alarm menu
@@ -1187,6 +1185,17 @@ void loop() { //-------------------------------------------------loop
         nightMode = false; // Stopping nightmode if in nightmode (no changes otherwise)
         mode = 0;
 
+        //Serial.println(nextAlarmIndex);
+        if(!(nextAlarmIndex & 0b10000000)){
+          AlarmU[(nextAlarmIndex - 1) * 2] ^= 0b10000000;
+          uint8_t buffer[2];
+          for(uint8_t i = 0; i < 2; i++){
+            buffer[i] = AlarmU[(nextAlarmIndex - 1) * 2 + i];
+          }
+          buffer[0] = buffer[0] & 0b01111111;
+          AT24C32::modifyU(nextAlarmIndex - 1, buffer);
+        }
+
         // Check new next alarm
         DS3231::readFullDate(timeData);
         nextAlarmIndex = findNextActiveAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f);
@@ -1380,14 +1389,12 @@ uint8_t computeValueInv(const uint8_t value){ // Compute value back to normal
 bool checkAlarm(uint8_t* time, uint8_t* bufferNU, uint8_t nbNU, uint8_t* bufferU, uint8_t nbU){ // This function is a bit overkill
 // but it separate findNextActiveAlarm from the alarm detection
   uint8_t i = 0;
-  //si il y a plusieur alarme unique a une même heure, seulement la premiere sera desarme.
   while(i < nbU){ // Check for each alarm
     if(
       ((bufferU[i*2] & 0b01111111) == time[0]) &&
       (bufferU[i*2+1] == (time[1] & 0b00111111)) // Check time
     ){
       const uint8_t tmp[2] = {bufferU[i] & 0b011111111, bufferU[i+1]};
-      //AT24C32::modifyU(i, tmp); // Deactivate U alarm after one use
       return true; // No need to go further
     }
     i++;
