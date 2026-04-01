@@ -1,0 +1,35 @@
+gauche to connecteur 77.2
+gauche to connecteur 81.69
+
+décalage : 81.69 - 77.2 = 4.49
+
+--display
+X1 = 51.9
+X2 = 249.6
+Y1 = 77
+Y2 = 123
+X2 - X1 = 197.7
+Y2 - Y1 = 46
+
+rond1
+X = 54.5
+Y = 79.6
+décalage du centre du rond par rapport au coin
+X = 2.6
+Y = 2.6
+
+
+--hardware
+X1 = 55
+X2 = 245
+Y1 = 78
+Y2 = 120
+X2 - X1 = 190
+Y2 - Y1 = 42
+
+rond1
+X = 57.6
+Y = 80.6
+décalage du centre du rond par rapport au coin
+X = 2.6
+Y = 2.6
