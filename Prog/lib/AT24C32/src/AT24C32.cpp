@@ -21,9 +21,12 @@ bool AT24C32::hasbegun() {
   return boolhasbegun;
 }
 
-//----------------------------------------------------------Lecture
+//----------------------------------------------------------Reading
 
 uint8_t AT24C32::readAll(uint8_t* bufferNU, uint8_t* bufferU){
+  // Write all existing NU data alarm in bufferNU
+  // Write all existing U data alarm in bufferU
+  // Return number of existing NU alarm (shifted) and U alarm
   uint8_t ret = 0; // 0bxxxx yyyy x-> nbNU; y-> nbU
 
   uint8_t nbRead = RegBytes;

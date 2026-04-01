@@ -428,18 +428,16 @@ void loop() { //-------------------------------------------------loop
         myMAX7219_2.send(MAXAddress2[3], 0);
         myMAX7219_2.send(MAXAddress2[4], 0);
       }
-
       if (lastMinute != computeValue(displayTime[0])){ // If new min we check if there is a new alarm
-        /*Serial.println("new minute");*/
-        lastMinute = computeValue(displayTime[0]);
+        lastMinute = computeValue(displayTime[0]); // Reset lastMinute value
         if(nbActive != 0){ // We check only if there are some alarms active
-          DS3231::readFullDate(timeData);
-          AlarmIsActive = checkAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f);
+          DS3231::readFullDate(timeData); // Refresh timeData (not the same as displayTime)
+          AlarmIsActive = checkAlarm(timeData, ActiveNU, (nbActive & 0xf0)>>4, ActiveU, nbActive & 0x0f); // Checking if an alarm is active
           if(AlarmIsActive){
             Serial.println("!----------------------!");
             Serial.println("    Alarme detectee");
             Serial.println("!----------------------!");
-            delay(200);
+            delay(100);
             mode = 3; // Going in mode 3 : ringing mode
           }
         }
@@ -1429,8 +1427,9 @@ void displayAlarm(uint8_t index, const uint8_t * bufferNU, const uint8_t* buffer
 }
 
 uint8_t findNextActiveAlarm(uint8_t* time, uint8_t* bufferNU, uint8_t nbNU, uint8_t* bufferU, uint8_t nbU){
-  //boucle Unique
-  int16_t current = toMin(time[0], time[1]) + 1; //pour ne pas afficher celui de la minute en cour.
+  // Returns the index of when the next alarm is
+  // To separate U from NU, we have NU -> 0b1xxxxxxx and U -> 0b0xxxxxxxx
+  int16_t current = toMin(time[0], time[1]) + 1; // Don't show for current time
   uint8_t index = 0; // no alarm
   int16_t minDiff = 10080; // minDiff set at 7day = 10080 min
   if(nbU){ // At least 1 U alarm
